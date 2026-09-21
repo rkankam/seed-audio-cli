@@ -1,0 +1,47 @@
+jobs:
+  - id: taxi-laugh-context-01
+    prompt: >
+      @Audio1 defines the speaker's vocal identity and timbre.
+      Preserve the same speaker identity, vocal texture and natural French pronunciation.
+      Natural intimate French conversation, dry close voice, no ambience.
+
+      The speaker says exactly:
+      "Le chauffeur m'a reconnu avant même que je monte."
+
+      Immediately after finishing the sentence, he naturally breaks into a very brief
+      involuntary amused laugh before continuing. The laugh must be clearly audible,
+      short, restrained and under the breath. Do not describe the laugh in words.
+      Do not skip the laugh. Do not add any other spoken words.
+    refs:
+      - ../../refs/voice_ref.wav
+    variations: 4
+    output:
+      format: wav
+      sample_rate: 48000
+      speech_rate: 0
+      loudness_rate: 0
+      pitch_rate: 0
+
+  - id: taxi-laugh-context-02
+    prompt: >
+      @Audio1 defines the speaker's vocal identity and timbre.
+      Preserve the same speaker identity, vocal texture and natural French pronunciation.
+      Natural intimate French conversation, dry close voice, no ambience.
+
+      The speaker has just said something absurd and is still slightly surprised by it.
+      He says exactly:
+      "de ne plus jamais l'appeler."
+
+      Immediately after the sentence, he lets out a short incredulous laugh,
+      as if he still cannot quite believe what happened. The laugh must be clearly audible,
+      brief, restrained and natural. Do not describe the laugh in words.
+      Do not skip the laugh. Do not add any other spoken words.
+    refs:
+      - ../../refs/voice_ref.wav
+    variations: 4
+    output:
+      format: wav
+      sample_rate: 48000
+      speech_rate: 0
+      loudness_rate: 0
+      pitch_rate: 0
