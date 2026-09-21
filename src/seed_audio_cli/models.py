@@ -2,13 +2,17 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 AudioFormat = Literal["wav", "mp3", "pcm", "ogg_opus"]
 SampleRate = Literal[8000, 16000, 24000, 32000, 44100, 48000]
 
 
-class AudioConfig(BaseModel):
+class StrictModel(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+class AudioConfig(StrictModel):
     format: AudioFormat = "wav"
     sample_rate: SampleRate | None = None
     speech_rate: int = Field(default=0, ge=-50, le=100)
@@ -17,11 +21,11 @@ class AudioConfig(BaseModel):
     enable_subtitle: bool = False
 
 
-class WatermarkConfig(BaseModel):
+class WatermarkConfig(StrictModel):
     aigc_watermark: bool = False
 
 
-class Reference(BaseModel):
+class Reference(StrictModel):
     audio_data: str | None = None
     audio_url: str | None = None
     image_data: str | None = None
@@ -46,7 +50,7 @@ class Reference(BaseModel):
         return "image"
 
 
-class SeedAudioRequest(BaseModel):
+class SeedAudioRequest(StrictModel):
     model: str = Field(default="seed-audio-1.0", min_length=1)
     text_prompt: str = Field(min_length=1, max_length=3000)
     references: list[Reference] | None = None
@@ -73,7 +77,7 @@ class SeedAudioRequest(BaseModel):
         return self.model_dump(exclude_none=True)
 
 
-class ReplayReference(BaseModel):
+class ReplayReference(StrictModel):
     kind: Literal["audio", "image"]
     source: str
     is_url: bool = False
@@ -82,7 +86,7 @@ class ReplayReference(BaseModel):
     duration_seconds: float | None = None
 
 
-class ReplayRecipe(BaseModel):
+class ReplayRecipe(StrictModel):
     schema_version: int = 1
     model: str = "seed-audio-1.0"
     text_prompt: str

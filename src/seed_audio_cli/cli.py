@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 from typing import Annotated
 
@@ -47,6 +48,22 @@ def _emit(value: dict, as_json: bool) -> None:
         typer.echo(json.dumps(value, ensure_ascii=False, indent=2))
 
 
+def _validate_out_path(out: Path | None, audio_format: str) -> None:
+    if out is None:
+        return
+    expected = {
+        "wav": {".wav"},
+        "mp3": {".mp3"},
+        "pcm": {".pcm"},
+        "ogg_opus": {".ogg", ".opus"},
+    }[audio_format]
+    if out.suffix.lower() not in expected:
+        allowed = ", ".join(sorted(expected))
+        raise ValueError(
+            f"--out extension must match --format {audio_format}; expected {allowed}"
+        )
+
+
 def _generate_once(
     *,
     prompt: str,
@@ -60,6 +77,8 @@ def _generate_once(
     out: Path | None,
     dry_run: bool,
 ) -> dict:
+    _validate_out_path(out, config.format)
+
     if dry_run:
         recipe = prepare_recipe(
             model=model,
@@ -78,20 +97,25 @@ def _generate_once(
         }
 
     run_dir = make_run_dir(runs_root, name)
-    recipe = prepare_recipe(
-        model=model,
-        prompt=prompt,
-        audio_refs=refs,
-        image_ref=image,
-        audio_config=config,
-        watermark=watermark,
-        run_dir=run_dir,
-    )
-    request, normalized_refs = build_request_from_recipe(recipe, run_dir)
-    recipe = recipe.model_copy(update={"references": normalized_refs})
+    try:
+        recipe = prepare_recipe(
+            model=model,
+            prompt=prompt,
+            audio_refs=refs,
+            image_ref=image,
+            audio_config=config,
+            watermark=watermark,
+            run_dir=run_dir,
+        )
+        request, normalized_refs = build_request_from_recipe(recipe, run_dir)
+        recipe = recipe.model_copy(update={"references": normalized_refs})
 
-    client = BytePlusClient(api_key(required=True) or "")
-    result = client.create(request.provider_payload())
+        client = BytePlusClient(api_key(required=True) or "")
+        result = client.create(request.provider_payload())
+    except Exception:
+        shutil.rmtree(run_dir, ignore_errors=True)
+        raise
+
     manifest = persist_result(
         run_dir=run_dir,
         recipe=recipe,
@@ -191,6 +215,7 @@ def replay(
             (source / "recipe.json").read_text(encoding="utf-8")
         )
         request, _ = build_request_from_recipe(recipe, source)
+        _validate_out_path(out, recipe.audio_config.format)
 
         if dry_run:
             _emit(
@@ -204,32 +229,41 @@ def replay(
             return
 
         target = make_run_dir(runs_root, name or f"replay-{source.name}")
-        replay_recipe = prepare_recipe(
-            model=recipe.model,
-            prompt=recipe.text_prompt,
-            audio_refs=[
-                str(source / item.source) if not item.is_url else item.source
-                for item in recipe.references
-                if item.kind == "audio"
-            ],
-            image_ref=next(
-                (
+        try:
+            replay_recipe = prepare_recipe(
+                model=recipe.model,
+                prompt=recipe.text_prompt,
+                audio_refs=[
                     str(source / item.source) if not item.is_url else item.source
                     for item in recipe.references
-                    if item.kind == "image"
+                    if item.kind == "audio"
+                ],
+                image_ref=next(
+                    (
+                        str(source / item.source)
+                        if not item.is_url
+                        else item.source
+                        for item in recipe.references
+                        if item.kind == "image"
+                    ),
+                    None,
                 ),
-                None,
-            ),
-            audio_config=recipe.audio_config,
-            watermark=recipe.watermark,
-            run_dir=target,
-        )
-        request, normalized = build_request_from_recipe(replay_recipe, target)
-        replay_recipe = replay_recipe.model_copy(update={"references": normalized})
+                audio_config=recipe.audio_config,
+                watermark=recipe.watermark,
+                run_dir=target,
+            )
+            request, normalized = build_request_from_recipe(replay_recipe, target)
+            replay_recipe = replay_recipe.model_copy(
+                update={"references": normalized}
+            )
 
-        result = BytePlusClient(api_key(required=True) or "").create(
-            request.provider_payload()
-        )
+            result = BytePlusClient(api_key(required=True) or "").create(
+                request.provider_payload()
+            )
+        except Exception:
+            shutil.rmtree(target, ignore_errors=True)
+            raise
+
         manifest = persist_result(
             run_dir=target,
             recipe=replay_recipe,

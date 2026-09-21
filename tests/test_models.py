@@ -36,3 +36,8 @@ def test_audio_reference_limit() -> None:
 def test_audio_config_bounds() -> None:
     with pytest.raises(ValidationError):
         AudioConfig(pitch_rate=13)
+
+
+def test_speaker_field_is_rejected() -> None:
+    with pytest.raises(ValidationError):
+        Reference.model_validate({"speaker": "some-provider-speaker-id"})
