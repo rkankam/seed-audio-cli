@@ -32,7 +32,7 @@ class Reference(StrictModel):
     image_url: str | None = None
 
     @model_validator(mode="after")
-    def exactly_one_source(self) -> "Reference":
+    def exactly_one_source(self) -> Reference:
         populated = [
             self.audio_data,
             self.audio_url,
@@ -58,7 +58,7 @@ class SeedAudioRequest(StrictModel):
     watermark: WatermarkConfig | None = None
 
     @model_validator(mode="after")
-    def validate_references(self) -> "SeedAudioRequest":
+    def validate_references(self) -> SeedAudioRequest:
         if not self.references:
             return self
 
