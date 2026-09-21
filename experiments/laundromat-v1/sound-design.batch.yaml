@@ -1,0 +1,109 @@
+jobs:
+  - id: laundromat-roomtone
+    prompt: >
+      Approximately 10 seconds of natural late-night laundromat room ambience.
+      Several washing machines and tumble dryers running softly in the room,
+      muted fabric tumbling, gentle mechanical drum rotation, low ventilation airflow,
+      subtle room reflections and occasional mild machine vibration.
+      Background ambience only. No voices, no footsteps, no music, no electronic beeps,
+      no digital tones, no alarms, no synthetic electronic noise.
+    variations: 1
+    output:
+      format: wav
+      sample_rate: 48000
+
+  - id: entrance-door
+    prompt: >
+      A short isolated sound effect, approximately 4 seconds.
+      A glass laundromat entrance door with an aluminum frame is opened from outside
+      and swings inward naturally. Realistic metal handle movement, hinge motion,
+      door seal and room acoustics. One clean entrance action only.
+      No bell, no chime, no voices, no footsteps, no music, no electronic sounds.
+    variations: 1
+    output:
+      format: wav
+      sample_rate: 48000
+
+  - id: wet-jacket-into-dryer
+    prompt: >
+      A short isolated sound effect, approximately 4 seconds.
+      A wet fabric jacket is tossed into the open metal drum of a tumble dryer.
+      Soft heavy fabric impact against the drum, damp cloth rustle and a brief metallic
+      resonance from the empty dryer. One clean action only.
+      No dryer startup, no voices, no music, no electronic beeps or tones.
+    variations: 1
+    output:
+      format: wav
+      sample_rate: 48000
+
+  - id: light-switches
+    prompt: >
+      A short isolated sound effect, approximately 5 seconds.
+      Three physical wall light switches in a laundromat are switched off one after another,
+      with natural spacing between each action. Distinct dry mechanical switch clicks,
+      subtle small-room reflections. No electrical buzz, no electronic relay sound,
+      no voices, no music, no beeps.
+    variations: 1
+    output:
+      format: wav
+      sample_rate: 48000
+
+  - id: exit-door-close
+    prompt: >
+      A short isolated sound effect, approximately 4 seconds.
+      A glass laundromat entrance door with an aluminum frame closes firmly behind someone,
+      followed by a clear mechanical latch settling into place.
+      Realistic door weight and indoor-to-outdoor acoustics. One clean action only.
+      No bell, no chime, no voices, no footsteps, no music, no electronic sounds.
+    variations: 1
+    output:
+      format: wav
+      sample_rate: 48000
+
+  - id: exterior-night-street
+    prompt: >
+      Approximately 10 seconds of quiet wet city street ambience at one in the morning.
+      Light rain on pavement, sparse distant traffic, faint tire hiss on wet asphalt,
+      soft urban air and distant non-specific city movement.
+      Restrained background ambience suitable under dialogue.
+      No voices, no sirens, no music, no electronic beeps, no prominent engine revs.
+    variations: 1
+    output:
+      format: wav
+      sample_rate: 48000
+
+  - id: home-roomtone
+    prompt: >
+      Approximately 10 seconds of very quiet small apartment ambience late at night.
+      Soft natural room tone with faint distant street noise filtered through closed windows,
+      subtle building presence and almost no activity.
+      Suitable underneath a quiet discovery scene.
+      No voices, no music, no television, no computer noise, no refrigerator hum,
+      no electronic beeps or synthetic tones.
+    variations: 1
+    output:
+      format: wav
+      sample_rate: 48000
+
+  - id: minidisc-handling
+    prompt: >
+      A short isolated sound effect, approximately 4 seconds.
+      Hands pick up and handle a small plastic MiniDisc cartridge and its case on a desk.
+      Light plastic contact, subtle case movement and a small placement sound on the tabletop.
+      Close-miked and realistic. No voices, no music, no electronic sounds.
+    variations: 1
+    output:
+      format: wav
+      sample_rate: 48000
+
+  - id: minidisc-player-click
+    prompt: >
+      A short isolated sound effect, approximately 4 seconds.
+      A MiniDisc cartridge is inserted into an early-2000s home MiniDisc deck,
+      followed by one satisfying mechanical loading click as the mechanism accepts it.
+      Focus on the physical insertion and mechanism only.
+      No playback audio, no music, no startup melody, no electronic beep or digital tone.
+    variations: 1
+    output:
+      format: wav
+      sample_rate: 48000
