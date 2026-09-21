@@ -19,8 +19,9 @@ Do not turn this repository into a generic TTS framework.
 2. The BytePlus call is synchronous.
    Do not add submit/status/poll abstractions unless the official API contract changes.
 
-3. BYTEPLUS_API_KEY must come from the environment.
-   Never accept it as a command-line option, write it to a run folder, log it, or commit it.
+3. BYTEPLUS_API_KEY must come from the process environment or .env in the current working directory.
+   Process environment values take precedence over .env.
+   Never accept the key as a command-line option, write it to a run folder, log it, or commit it.
 
 4. Preserve the run artifact contract in docs/RUN_FORMAT.md.
    Existing run folders must remain replayable after compatible changes.
@@ -36,13 +37,15 @@ Do not turn this repository into a generic TTS framework.
 
 ## Agent workflow
 
+Prefer uv run so execution does not depend on prior virtual-environment activation.
+
 Before a provider call:
 
-    seed-audio gen ... --dry-run --json
+    uv run seed-audio gen ... --dry-run --json
 
 For a workflow:
 
-    seed-audio matrix examples/matrix.yaml --dry-run --json
+    uv run seed-audio matrix examples/matrix.yaml --dry-run --json
 
 Only remove dry-run after validation when a real generation is explicitly intended.
 
@@ -50,12 +53,12 @@ Only remove dry-run after validation when a real generation is explicitly intend
 
 Install:
 
-    python -m pip install -e ".[dev]"
+    uv sync --extra dev
 
 Run:
 
-    ruff check .
-    pytest
+    uv run ruff check .
+    uv run pytest -q
 
 When changing the provider contract:
 

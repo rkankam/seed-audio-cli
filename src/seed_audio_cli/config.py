@@ -25,17 +25,20 @@ def _dotenv_value(name: str) -> str | None:
     return None
 
 
+def _setting(name: str, default: str | None = None) -> str | None:
+    return os.getenv(name) or _dotenv_value(name) or default
+
+
 def api_url() -> str:
-    return os.getenv("BYTEPLUS_SEED_AUDIO_URL", DEFAULT_API_URL)
+    return _setting("BYTEPLUS_SEED_AUDIO_URL", DEFAULT_API_URL) or DEFAULT_API_URL
 
 
 def api_key(required: bool = True) -> str | None:
-    value = os.getenv("BYTEPLUS_API_KEY")
-    if not value:
-        value = _dotenv_value("BYTEPLUS_API_KEY")
+    value = _setting("BYTEPLUS_API_KEY")
     if required and not value:
         raise RuntimeError(
             "BYTEPLUS_API_KEY is required for provider calls; "
-            + "it is not accepted as a CLI argument."
+            + "set it in the environment or .env in the current working directory. "
+            + "It is not accepted as a CLI argument."
         )
     return value

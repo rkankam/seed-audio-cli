@@ -6,14 +6,32 @@ The CLI is intended to be safer for agents than direct curl calls.
 
 An agent should start with:
 
-    seed-audio --help
-    seed-audio gen --help
+    uv run seed-audio --help
+    uv run seed-audio gen --help
 
 Then read:
 
 - AGENTS.md
 - docs/CLI.md
 - docs/RUN_FORMAT.md
+
+## Configuration
+
+The CLI resolves BytePlus settings in this order:
+
+1. process environment
+2. .env in the current working directory
+3. built-in default for the API URL only
+
+Required secret:
+
+    BYTEPLUS_API_KEY=...
+
+Optional endpoint override:
+
+    BYTEPLUS_SEED_AUDIO_URL=...
+
+Never include either value in generated run artifacts. Run from the repository/workspace root when relying on .env.
 
 ## Recommended generation loop
 
@@ -26,11 +44,22 @@ Then read:
 
 Example:
 
-    seed-audio gen       --prompt-file prompts/taxi.txt       --ref refs/driver.wav       --format wav       --sample-rate 48000       --dry-run       --json
+    uv run seed-audio gen \
+      --prompt-file prompts/taxi.txt \
+      --ref refs/driver.wav \
+      --format wav \
+      --sample-rate 48000 \
+      --dry-run \
+      --json
 
 Then:
 
-    seed-audio gen       --prompt-file prompts/taxi.txt       --ref refs/driver.wav       --format wav       --sample-rate 48000       --json
+    uv run seed-audio gen \
+      --prompt-file prompts/taxi.txt \
+      --ref refs/driver.wav \
+      --format wav \
+      --sample-rate 48000 \
+      --json
 
 ## Parsing success
 
@@ -76,13 +105,13 @@ A workflow may contain multiple jobs and therefore more calls. Always expand and
 
 Do not manually reconstruct an old request from logs if the run directory exists. Use:
 
-    seed-audio replay runs/<run-id> --dry-run --json
+    uv run seed-audio replay runs/<run-id> --dry-run --json
 
 then replay without --dry-run when execution is desired.
 
 ## Secrets
 
-BYTEPLUS_API_KEY belongs in the environment only.
+BYTEPLUS_API_KEY belongs in the process environment or .env in the current working directory.
 
 Agents must never copy it into:
 
