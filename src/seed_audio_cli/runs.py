@@ -20,6 +20,13 @@ def slugify(value: str) -> str:
     return slug[:40] or "run"
 
 
+def audio_artifact_filename(audio_format: str, prefix: str | None = None) -> str:
+    suffix = ".ogg" if audio_format == "ogg_opus" else f".{audio_format}"
+    if prefix:
+        return f"{slugify(prefix)}_audio{suffix}"
+    return f"audio{suffix}"
+
+
 def make_run_dir(root: Path, name: str) -> Path:
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%S.%fZ")
     path = root / f"{stamp}_{slugify(name)}"
@@ -165,6 +172,7 @@ def persist_result(
     provider_result: ProviderResult,
     command: str,
     external_out: Path | None = None,
+    artifact_prefix: str | None = None,
 ) -> dict:
     run_dir.mkdir(parents=True, exist_ok=True)
     recipe_path = run_dir / "recipe.json"
@@ -177,9 +185,10 @@ def persist_result(
     json_write(response_path, redact_response(provider_result.data))
     prompt_path.write_text(recipe.text_prompt, encoding="utf-8")
 
-    fmt = recipe.audio_config.format
-    suffix = ".ogg" if fmt == "ogg_opus" else f".{fmt}"
-    audio_path = run_dir / f"audio{suffix}"
+    audio_path = run_dir / audio_artifact_filename(
+        recipe.audio_config.format,
+        artifact_prefix,
+    )
 
     audio_b64 = provider_result.data.get("audio")
     if audio_b64:
