@@ -76,6 +76,7 @@ def _generate_once(
     runs_root: Path,
     out: Path | None,
     dry_run: bool,
+    artifact_prefix: str | None = None,
 ) -> dict:
     _validate_out_path(out, config.format)
 
@@ -123,6 +124,7 @@ def _generate_once(
         provider_result=result,
         command="gen",
         external_out=out,
+        artifact_prefix=artifact_prefix,
     )
     return {
         "ok": True,
@@ -192,6 +194,7 @@ def gen(
                     runs_root=runs_root,
                     out=variant_out,
                     dry_run=dry_run,
+                    artifact_prefix=None,
                 )
             )
         _emit({"ok": True, "runs": results}, as_json)
@@ -322,6 +325,7 @@ def _run_workflow(
                     runs_root=runs_root,
                     out=None,
                     dry_run=dry_run,
+                    artifact_prefix=name,
                 )
             )
     return results

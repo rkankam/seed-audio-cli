@@ -81,11 +81,25 @@ The generated Base64 audio body is replaced by:
 
 Other response metadata, including temporary URLs, durations, provider code/message and subtitles, is preserved when present.
 
-## audio.<ext>
+## audio artifact
 
 Canonical persisted provider output.
 
-manifest.json records its SHA-256.
+For direct `gen` and replay runs, the default filename remains:
+
+    audio.<ext>
+
+For `batch` and `matrix` workflows, the workflow run name derived from `jobs[].id`
+or `runs[].id` prefixes the canonical artifact:
+
+    laundromat-roomtone_audio.wav
+    entrance-door_audio.wav
+    baseline-01_audio.wav
+
+When a workflow has multiple variations, the variation suffix is included in the prefix.
+
+manifest.json always records the exact audio filename and its SHA-256. Consumers should
+read the manifest instead of assuming a fixed filename.
 
 ## subtitles.json
 

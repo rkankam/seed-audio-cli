@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from seed_audio_cli.models import AudioConfig
-from seed_audio_cli.runs import prepare_recipe
+from seed_audio_cli.runs import audio_artifact_filename, prepare_recipe
 
 
 def test_url_reference_does_not_require_local_file() -> None:
@@ -38,3 +38,18 @@ def test_image_and_audio_inputs_rejected(tmp_path: Path) -> None:
         assert "cannot be mixed" in str(exc)
     else:
         raise AssertionError("expected ValueError")
+
+
+def test_audio_artifact_filename_uses_workflow_prefix() -> None:
+    assert (
+        audio_artifact_filename("wav", "laundromat-roomtone")
+        == "laundromat-roomtone_audio.wav"
+    )
+    assert (
+        audio_artifact_filename("ogg_opus", "Entrance Door")
+        == "entrance-door_audio.ogg"
+    )
+
+
+def test_audio_artifact_filename_preserves_legacy_default() -> None:
+    assert audio_artifact_filename("wav") == "audio.wav"
