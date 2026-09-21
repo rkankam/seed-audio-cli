@@ -1,0 +1,39 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "seed-audio-cli"
+version = "0.1.0"
+description = "Agent-friendly CLI for the official BytePlus Seed Audio 1.0 API"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "httpx>=0.28,<1",
+  "mutagen>=1.47,<2",
+  "pydantic>=2.8,<3",
+  "PyYAML>=6,<7",
+  "typer>=0.16,<1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3,<9",
+  "ruff>=0.9,<1",
+]
+
+[project.scripts]
+seed-audio = "seed_audio_cli.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/seed_audio_cli"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

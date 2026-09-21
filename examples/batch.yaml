@@ -1,0 +1,17 @@
+jobs:
+  - id: ambience-only
+    prompt: "A quiet late-night metro platform. Fluorescent hum, distant train rumble, no speech."
+    variations: 1
+    output:
+      format: wav
+      sample_rate: 48000
+
+  - id: referenced-performance
+    prompt_file: prompts/referenced-performance.txt
+    refs:
+      - refs/driver.wav
+    variations: 2
+    output:
+      format: wav
+      sample_rate: 48000
+      enable_subtitle: true

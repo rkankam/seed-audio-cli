@@ -1,0 +1,4 @@
+@Audio1 is the driver.
+
+Inside a parked taxi at night, the driver speaks in French with calm, absurd confidence.
+Keep the voice identity close to @Audio1. Sparse cabin ambience, no music.
