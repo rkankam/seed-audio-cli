@@ -9,3 +9,5 @@ build/
 *.egg-info/
 runs/
 .DS_Store
+refs/
+.omo/
