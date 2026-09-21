@@ -1,0 +1,59 @@
+jobs:
+  - id: taxi-rain-interior
+    prompt: >
+      Approximately 8 seconds of realistic ambience recorded from inside a closed car at night in the rain.
+      Rain tapping naturally on the roof and side windows, soft wet-road tire noise outside,
+      faint low engine and cabin vibration, muted exterior traffic through the glass.
+      Intimate car-interior perspective suitable under dialogue.
+      No voices, no music, no radio, no horn, no electronic beeps, no exaggerated thunder.
+    variations: 1
+    output:
+      format: wav
+      sample_rate: 48000
+
+  - id: tunnel-car-exterior
+    prompt: >
+      Approximately 5 seconds of a car driving through a road tunnel, recorded from outside the vehicle
+      from a fixed position near the tunnel wall. The car approaches, passes, and continues away.
+      Natural tire noise on asphalt, engine sound and strong but realistic tunnel reflections and reverb.
+      One passenger car only. No voices, no music, no horn, no siren, no electronic sounds.
+    variations: 1
+    output:
+      format: wav
+      sample_rate: 48000
+
+  - id: tunnel-car-interior
+    prompt: >
+      Approximately 5 seconds of a car driving through a road tunnel, recorded from inside the closed cabin.
+      Continuous tire noise on the road, low engine vibration, tunnel reflections heard through the body
+      and windows, subtle enclosed-cabin resonance. Realistic and restrained.
+      No voices, no music, no radio, no horn, no siren, no electronic beeps.
+    variations: 1
+    output:
+      format: wav
+      sample_rate: 48000
+
+  - id: motorway-rest-area
+    prompt: >
+      Approximately 10 seconds of quiet nighttime motorway rest-area ambience.
+      Open outdoor air, sparse distant highway traffic, soft tire hiss and occasional low vehicle pass-bys
+      far away, subtle wind and large empty paved-space reflections.
+      The motorway must remain distant rather than dominant.
+      No voices, no music, no announcements, no sirens, no electronic beeps.
+    variations: 1
+    output:
+      format: wav
+      sample_rate: 48000
+
+  - id: phone-out-of-pocket
+    prompt: >
+      A short isolated sound effect, approximately 3 seconds.
+      A person reaches into a trouser or jacket pocket and pulls out a smartphone.
+      Natural fabric rustle, slight friction as the phone slides from the pocket,
+      followed by a small hand adjustment while holding it.
+      Close-miked, realistic, one clean action only.
+      No notification sound, no vibration alert, no voices, no music, no electronic beep.
+    variations: 1
+    output:
+      format: wav
+      sample_rate: 48000
