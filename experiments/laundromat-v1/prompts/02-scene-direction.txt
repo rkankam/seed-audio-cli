@@ -1,0 +1,29 @@
+@Audio1 defines the speaker's vocal identity and timbre only.
+
+Preserve the same speaker identity, vocal texture and natural French pronunciation.
+Do not copy the words, rhythm, phrasing, emotion or intonation of @Audio1.
+
+Scene:
+It is one in the morning.
+The speaker is recounting something strange that happened to him earlier.
+He does not think the story is particularly absurd or funny.
+To him, accepting a cardboard box of old music from a laundromat owner seems completely reasonable.
+
+Performance:
+Natural spoken French.
+Intimate conversational delivery.
+Calm, understated and matter-of-fact.
+Do not perform the story like a joke.
+Do not signal punchlines.
+No exaggerated irony.
+No theatrical storytelling.
+
+The absurdity should emerge only from the events themselves.
+
+"Une heure du matin, veste trempée, je rentre dans une laverie.
+Le patron voulait fermer.
+Il m’a dit : « Prends ce carton et je te laisse finir. »
+J’ai dit oui.
+Deux minutes après, il a coupé les lumières et m’a mis dehors.
+Le carton était rempli de disques pleins de DJ sets House music.
+Bref… j'en ai retrouvé un sur SoundCloud."
