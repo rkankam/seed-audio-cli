@@ -1,0 +1,40 @@
+jobs:
+  - id: taxi-chuckle-01
+    prompt: >
+      @Audio1 defines the speaker's vocal identity and timbre only.
+      Preserve the same speaker identity and vocal texture as @Audio1.
+      Generate a very short restrained spontaneous chuckle from the same speaker.
+      This is not a full laugh.
+      It should sound brief, natural, under the breath, mildly amused,
+      and suitable immediately after recounting a strange observation.
+      Dry close voice only.
+      No spoken words, no room tone, no ambience, no music, no electronic sounds.
+    refs:
+      - ../../refs/voice_ref.wav
+    variations: 2
+    output:
+      format: wav
+      sample_rate: 48000
+      speech_rate: 0
+      loudness_rate: 0
+      pitch_rate: 0
+
+  - id: taxi-chuckle-02
+    prompt: >
+      @Audio1 defines the speaker's vocal identity and timbre only.
+      Preserve the same speaker identity and vocal texture as @Audio1.
+      Generate a very short quiet incredulous chuckle from the same speaker.
+      This is not a full laugh.
+      It should sound slightly more amused and slightly more disbelieving than the first chuckle,
+      but still restrained, natural, brief, and conversational.
+      Dry close voice only.
+      No spoken words, no room tone, no ambience, no music, no electronic sounds.
+    refs:
+      - ../../refs/voice_ref.wav
+    variations: 2
+    output:
+      format: wav
+      sample_rate: 48000
+      speech_rate: 0
+      loudness_rate: 0
+      pitch_rate: 0
