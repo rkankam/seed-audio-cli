@@ -1,0 +1,38 @@
+@Audio1 defines the speaker's vocal identity and timbre only.
+
+Preserve the same speaker identity, vocal texture and natural French pronunciation.
+Do not copy the words, rhythm, phrasing, emotion or intonation of @Audio1.
+
+The speaker is recounting a strange late-night taxi encounter to one person nearby.
+
+Overall performance:
+Natural conversational French.
+Intimate, understated delivery.
+Slightly tired and mildly amused.
+He is telling something that genuinely happened to him, not performing a joke.
+No announcer voice.
+No theatrical storytelling.
+No exaggerated punchlines.
+Let the absurdity come from the situation itself.
+
+The speaker was slightly drunk during the event, but he is recounting it clearly afterward.
+His amusement should remain subtle and natural.
+
+Performance instructions:
+- After "Le chauffeur m'a reconnu avant même que je monte.", give a very small spontaneous chuckle. Brief and restrained, almost under the breath.
+- "Il était sympa mais il mettait toujours la musique trop fort." is a simple observation, with mild affection rather than annoyance.
+- "Il a mis ce mix, roulé 20 min sans parler" should feel calm and observational. Do not create suspense yet.
+- On "et puis il m'a demandé de...", slow down slightly and hesitate naturally after "de...". He briefly searches for how to phrase what happened.
+- "de ne plus jamais l'appeler." should be delivered plainly, almost as if the request still seems slightly puzzling to him. Do not turn it into a dramatic reveal.
+- After that sentence, give another very small amused chuckle, slightly more incredulous than the first one.
+- "Bref, j'ai retrouvé le mix sur youtube." should sound casually satisfied. Almost an afterthought. Not promotional, not a call to action. Let the pitch fall naturally at the end.
+
+Do not speak the performance markers ":petit rire:" or ":hésitation:". They indicate non-verbal performance only.
+
+"22h30, un peu bourré, je monte dans un taxi.
+Le chauffeur m'a reconnu avant même que je monte. :petit rire:
+Il était sympa mais il mettait toujours la musique trop fort.
+Il a mis ce mix, roulé 20 min sans parler 
+et puis il m'a demandé de... :hésitation:
+de ne plus jamais l'appeler. :petit rire:
+Bref, j'ai retrouvé le mix sur youtube."
