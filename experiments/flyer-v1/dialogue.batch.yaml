@@ -1,0 +1,13 @@
+jobs:
+  - id: flyer-dialogue
+    prompt_file: prompts/dialogue.txt
+    refs:
+      - ../../refs/voice_ref.wav
+    variations: 2
+    output:
+      format: wav
+      sample_rate: 48000
+      speech_rate: 0
+      loudness_rate: 0
+      pitch_rate: 0
+      enable_subtitle: true

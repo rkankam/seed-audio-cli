@@ -1,0 +1,52 @@
+@Audio1 defines the speaker's vocal identity and timbre only.
+
+Preserve exactly the same speaker identity, vocal texture, accent, age impression and natural French pronunciation.
+Do not copy the words, rhythm, phrasing, emotion or intonation of @Audio1.
+
+The speaker is recounting a strange late-night encounter after leaving work.
+
+Overall performance:
+Natural conversational French.
+Close, intimate, understated delivery.
+Slightly tired from the late hour, but still alert.
+Dry, matter-of-fact storytelling.
+He is telling something that genuinely happened to him, not performing a joke.
+No announcer voice.
+No theatrical storytelling.
+No trailer delivery.
+No exaggerated punchlines.
+Let the absurdity come entirely from the situation.
+
+Performance instructions:
+- "Minuit quarante-cinq, je sors en retard du bureau." should be simple and immediate, like the opening of a real anecdote.
+- "Un mec me tend un flyer et me dit :" should stay casual and observational.
+- For the quoted flyer speech, keep the SAME speaker identity. Do not create a second voice. Only shift the intention very slightly, as if the narrator is reenacting what the man said.
+- "Viens à la Boucle." should be short, direct and inviting, but not salesy.
+- "C’est une soirée où ils passent qu’un seul morceau en boucle." should sound like a strange fact stated as if it were completely normal.
+- Pause briefly before "Mais c’est toujours complet..."
+- "parce que personne sait quand il va s’arrêter." should remain understated. Do not sell it as a punchline or dramatic reveal.
+- "Bref..." should have a small natural pause after it.
+- "j’ai retrouvé le morceau sur SoundCloud." should sound casually satisfied and almost thrown away as an afterthought. Not promotional, not a call to action. Let the pitch fall naturally at the end.
+
+The recording should be dry and voice-forward.
+No music.
+No ambience.
+No sound effects.
+No laughter.
+No additional voices.
+
+"Minuit quarante-cinq, je sors en retard du bureau.
+
+Un mec me tend un flyer et me dit :
+
+« Viens à la Boucle.
+
+C’est une soirée où ils passent qu’un seul morceau en boucle.
+
+Mais c’est toujours complet...
+
+parce que personne sait quand il va s’arrêter. »
+
+Bref...
+
+j’ai retrouvé le morceau sur SoundCloud."
