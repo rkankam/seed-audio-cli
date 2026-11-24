@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Literal
+from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -85,6 +86,20 @@ class ReplayReference(StrictModel):
     sha256: str | None = None
     bytes: int | None = None
     duration_seconds: float | None = None
+
+    @model_validator(mode="after")
+    def validate_source_classification(self) -> ReplayReference:
+        try:
+            parsed = urlsplit(self.source)
+            source_is_url = parsed.scheme in {"http", "https"} and bool(parsed.netloc)
+        except ValueError:
+            source_is_url = False
+
+        if self.is_url != source_is_url:
+            raise ValueError("reference URL classification is inconsistent with source")
+        if self.url_redacted and not self.is_url:
+            raise ValueError("url_redacted can only be set for a URL reference")
+        return self
 
 
 class ReplayRecipe(StrictModel):

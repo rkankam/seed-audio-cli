@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
 import re
 import shutil
@@ -135,6 +136,11 @@ def build_request_from_recipe(
     *,
     replay: bool = False,
 ) -> tuple[SeedAudioRequest, list[ReplayReference]]:
+    # Revalidate objects as well as parsed recipes; model_copy/model_construct can
+    # otherwise bypass ReplayReference's source-classification validator.
+    for item in recipe.references:
+        ReplayReference.model_validate(item.model_dump())
+
     refs: list[Reference] = []
     normalized: list[ReplayReference] = []
     replay_paths: list[Path] = []
@@ -211,6 +217,81 @@ def build_request_from_recipe(
         watermark=recipe.watermark,
     )
     return request, normalized
+
+
+def prepare_replay_recipe(
+    recipe: ReplayRecipe,
+    request: SeedAudioRequest,
+    run_dir: Path,
+) -> ReplayRecipe:
+    """Copy the exact verified local bytes from the prepared provider request."""
+    request_refs = request.references or []
+    if len(request_refs) != len(recipe.references):
+        raise ValueError("replay reference count changed while preparing the run")
+
+    copied_content: list[bytes | None] = []
+    for item, request_ref in zip(recipe.references, request_refs, strict=True):
+        ReplayReference.model_validate(item.model_dump())
+        if request_ref.kind != item.kind:
+            raise ValueError("replay reference kind changed while preparing the run")
+
+        data_key = "audio_data" if item.kind == "audio" else "image_data"
+        url_key = "audio_url" if item.kind == "audio" else "image_url"
+        if item.is_url:
+            if item.url_redacted or getattr(request_ref, url_key) != item.source:
+                raise ValueError(
+                    "replay reference URL classification changed while preparing the run"
+                )
+            copied_content.append(None)
+            continue
+
+        if getattr(request_ref, url_key) is not None:
+            raise ValueError("local replay reference became a URL while preparing the run")
+        encoded = getattr(request_ref, data_key)
+        if encoded is None:
+            raise ValueError("local replay reference data is missing from the request")
+        try:
+            content = base64.b64decode(encoded, validate=True)
+        except Exception as exc:
+            raise ValueError("local replay reference data is invalid Base64") from exc
+        if item.bytes is None or item.sha256 is None:
+            raise ValueError(
+                "local replay reference is missing integrity metadata "
+                "(sha256 and bytes); regenerate the run or provide a new reference"
+            )
+        if len(content) != item.bytes:
+            raise ValueError("local replay reference size changed before it could be copied")
+        if hashlib.sha256(content).hexdigest() != item.sha256:
+            raise ValueError("local replay reference SHA-256 changed before it could be copied")
+        copied_content.append(content)
+
+    references: list[ReplayReference] = []
+    for index, (item, content) in enumerate(
+        zip(recipe.references, copied_content, strict=True),
+        start=1,
+    ):
+        if item.is_url:
+            references.append(item)
+            continue
+        assert content is not None
+        refs_dir = run_dir / "refs"
+        refs_dir.mkdir(parents=True, exist_ok=True)
+        filename = Path(item.source).name
+        if not filename or filename in {".", ".."}:
+            raise ValueError("local replay reference has an invalid filename")
+        copied_path = refs_dir / f"{index:02d}_{filename}"
+        copied_path.write_bytes(content)
+        references.append(
+            item.model_copy(
+                update={
+                    "source": copied_path.relative_to(run_dir).as_posix(),
+                    "is_url": False,
+                    "url_redacted": False,
+                }
+            )
+        )
+
+    return recipe.model_copy(update={"references": references})
 
 
 def prepare_recipe(

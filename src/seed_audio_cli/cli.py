@@ -15,6 +15,7 @@ from .runs import (
     make_run_dir,
     persist_result,
     prepare_recipe,
+    prepare_replay_recipe,
     redact_provider_payload,
     redact_sensitive_values,
 )
@@ -235,35 +236,7 @@ def replay(
 
         target = make_run_dir(runs_root, name or f"replay-{source.name}")
         try:
-            replay_recipe = prepare_recipe(
-                model=recipe.model,
-                prompt=recipe.text_prompt,
-                audio_refs=[
-                    str(source / item.source) if not item.is_url else item.source
-                    for item in recipe.references
-                    if item.kind == "audio"
-                ],
-                image_ref=next(
-                    (
-                        str(source / item.source)
-                        if not item.is_url
-                        else item.source
-                        for item in recipe.references
-                        if item.kind == "image"
-                    ),
-                    None,
-                ),
-                audio_config=recipe.audio_config,
-                watermark=recipe.watermark,
-                run_dir=target,
-            )
-            request, normalized = build_request_from_recipe(
-                replay_recipe, target, replay=True
-            )
-            replay_recipe = replay_recipe.model_copy(
-                update={"references": normalized}
-            )
-
+            replay_recipe = prepare_replay_recipe(recipe, request, target)
             result = BytePlusClient(api_key(required=True) or "").create(
                 request.provider_payload()
             )

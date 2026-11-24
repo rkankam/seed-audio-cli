@@ -132,7 +132,7 @@ Consumers should prefer manifest.json over parsing filenames.
 
 Replay creates a new run directory, copies the historical references, rebuilds Base64 media and issues a fresh provider request with a fresh UUID.
 
-Before request construction, local references must resolve inside the run directory. Absolute paths, parent traversal, and symlinks that resolve outside it are rejected. The reference size and SHA-256 must match recipe.json; a mismatch fails before any provider request. Older local recipes missing either integrity field are rejected with an explicit error because their content cannot be verified. CLI-created schema-version-1 local recipes already include both values.
+The `is_url` flag must agree with whether `source` is an HTTP(S) URL; inconsistent references are rejected before request construction. Before request construction, local references must resolve inside the run directory. Absolute paths, parent traversal, and symlinks that resolve outside it are rejected. The reference size and SHA-256 must match recipe.json; a mismatch fails before any provider request. Older local recipes missing either integrity field are rejected with an explicit error because their content cannot be verified. CLI-created schema-version-1 local recipes already include both values.
 
 Older remote recipes without `url_redacted` remain replayable while their stored URL is valid; their URL is redacted from new output and artifacts. The old recipe itself is not rewritten, so protect or remove older run folders that already contain sensitive URLs. Newly persisted recipes with `url_redacted: true` require a fresh reference URL.
 

@@ -160,6 +160,124 @@ def test_replay_confines_all_paths_before_reading_or_encoding_any_reference(
     assert touched == []
 
 
+@pytest.mark.parametrize("dry_run", [True, False], ids=["dry-run", "simulated-real"])
+def test_replay_rejects_local_path_misclassified_as_url_before_io_or_provider(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    dry_run: bool,
+) -> None:
+    run_dir = tmp_path / "run"
+    outside = tmp_path / "outside.wav"
+    outside.write_bytes(b"synthetic outside reference")
+    make_run(run_dir)
+    recipe_path = run_dir / "recipe.json"
+    recipe = json.loads(recipe_path.read_text(encoding="utf-8"))
+    recipe["references"][0].update({"source": str(outside), "is_url": True})
+    recipe_path.write_text(json.dumps(recipe), encoding="utf-8")
+    requests = install_recording_client(monkeypatch)
+    io_events: list[str] = []
+
+    def observe(name: str, original):
+        def wrapped(*args, **kwargs):
+            io_events.append(name)
+            return original(*args, **kwargs)
+
+        return wrapped
+
+    monkeypatch.setattr(
+        runs,
+        "validate_local_media",
+        observe("validate", runs.validate_local_media),
+    )
+    monkeypatch.setattr(runs, "_copy_reference", observe("copy", runs._copy_reference))
+    monkeypatch.setattr(runs, "sha256_file", observe("hash", runs.sha256_file))
+    monkeypatch.setattr(runs, "encode_base64", observe("encode", runs.encode_base64))
+    original_request = runs.SeedAudioRequest
+
+    def observe_request(**kwargs):
+        io_events.append("request")
+        return original_request(**kwargs)
+
+    monkeypatch.setattr(runs, "SeedAudioRequest", observe_request)
+    runs_root = tmp_path / "new-runs"
+
+    result = invoke_replay(run_dir, dry_run=dry_run, runs_root=runs_root)
+
+    assert result.exit_code == 2
+    error = json.loads(result.stdout)["error"]
+    assert "classification" in error.lower()
+    assert io_events == []
+    assert requests == []
+    assert not runs_root.exists()
+
+
+def test_replay_run_copies_the_exact_integrity_checked_request_bytes(
+    tmp_path: Path,
+) -> None:
+    run_dir = tmp_path / "source-run"
+    reference_path = make_run(run_dir)
+    recipe = ReplayRecipe.model_validate_json(
+        (run_dir / "recipe.json").read_text(encoding="utf-8")
+    )
+    request, _ = runs.build_request_from_recipe(recipe, run_dir, replay=True)
+    validated_bytes = base64.b64decode(request.references[0].audio_data, validate=True)
+
+    reference_path.write_bytes(b"changed after integrity validation")
+    target = tmp_path / "replayed-run"
+    target.mkdir()
+    replay_recipe = runs.prepare_replay_recipe(recipe, request, target)
+
+    copied = target / replay_recipe.references[0].source
+    assert copied.read_bytes() == validated_bytes
+    assert replay_recipe.references[0].bytes == len(validated_bytes)
+    assert replay_recipe.references[0].sha256 == hashlib.sha256(validated_bytes).hexdigest()
+
+
+def test_real_replay_preserves_valid_remote_reference_without_copy(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    run_dir = tmp_path / "remote-run"
+    run_dir.mkdir()
+    remote_url = "https://media.example.test/reference.wav"
+    recipe = {
+        "schema_version": 1,
+        "model": "seed-audio-1.0",
+        "text_prompt": "Synthetic remote replay test",
+        "references": [
+            {"kind": "audio", "source": remote_url, "is_url": True}
+        ],
+        "audio_config": {"format": "wav"},
+    }
+    (run_dir / "recipe.json").write_text(json.dumps(recipe), encoding="utf-8")
+    requests: list[dict] = []
+
+    class RecordingClient:
+        def __init__(self, api_key: str) -> None:
+            assert api_key == ""
+
+        def create(self, payload: dict) -> ProviderResult:
+            requests.append(payload)
+            return ProviderResult(
+                data={"audio": base64.b64encode(b"synthetic output").decode("ascii")},
+                request_id="synthetic-request-id",
+                provider_log_id=None,
+            )
+
+    monkeypatch.setattr(cli, "BytePlusClient", RecordingClient)
+    monkeypatch.setattr(cli, "api_key", lambda required: None)
+    result = invoke_replay(
+        run_dir,
+        dry_run=False,
+        runs_root=tmp_path / "new-runs",
+    )
+
+    assert result.exit_code == 0
+    assert requests[0]["references"][0]["audio_url"] == remote_url
+    new_run_dir = Path(json.loads(result.stdout)["run_dir"])
+    assert not (new_run_dir / "refs").exists()
+
+
 @pytest.mark.parametrize(
     ("changed_content", "expected_error"),
     [
