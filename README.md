@@ -18,9 +18,8 @@ The project deliberately focuses on direct audio creation with text prompts plus
 ## Install
 
     uv sync --extra dev
-    cp .env.example .env
 
-Set BYTEPLUS_API_KEY in .env, or export it in the shell. Environment variables take precedence over .env.
+For real generation, set BYTEPLUS_API_KEY in the process environment or in a .env file in the current working directory. Process environment values take precedence.
 
 The CLI reads .env only from the current working directory. Run commands from the repository/workspace root when relying on .env.
 
@@ -34,31 +33,28 @@ For agent and local development workflows, prefer uv run seed-audio ...; it does
 
 ## Quick start
 
-Text only:
+Start with a free text-only validation. It needs no API key or external files and makes no provider request:
+
+    uv run seed-audio gen --prompt "Rain outside a small late-night station." --dry-run --json
+
+Validate the published batch and matrix examples without a key or provider calls:
+
+    uv run seed-audio batch examples/batch.yaml --dry-run --json
+    uv run seed-audio matrix examples/matrix.yaml --dry-run --json
+
+### Real generation
+
+Generation sends a request to BytePlus and may consume credits:
 
     uv run seed-audio gen --prompt "Rain outside a small late-night station." --out take.wav
 
-Prompt file plus local audio reference:
+### User-provided references
 
-    uv run seed-audio gen \
-      --prompt-file prompts/scene.txt \
-      --ref refs/driver.wav \
-      --format wav \
-      --sample-rate 48000
+Reference examples require files you provide. Replace the path with a valid local file or URL, then dry-run before any real call:
 
-Image reference:
+    uv run seed-audio gen --prompt "A calm spoken greeting." --ref /path/to/your/reference.wav --dry-run --json
 
-    uv run seed-audio gen \
-      --prompt-file prompts/character.txt \
-      --image refs/character.png
-
-Validate without calling BytePlus:
-
-    uv run seed-audio gen --prompt-file prompts/scene.txt --ref refs/driver.wav --dry-run --json
-
-Generate three independent variations:
-
-    uv run seed-audio gen --prompt-file prompts/scene.txt --ref refs/driver.wav -n 3
+Audio and image references are mutually exclusive. Up to three audio references or one image reference are supported.
 
 Replay a previous run:
 
@@ -80,7 +76,7 @@ Every successful provider call creates an immutable run folder:
       subtitles.json        # only when returned
       refs/                 # copied local references
 
-recipe.json is the replayable local recipe. request.json is a readable representation of the actual provider request with large Base64 media values redacted. response.json similarly redacts the returned Base64 audio. The generated audio is always persisted locally because provider URLs are temporary.
+recipe.json is the replayable local recipe. request.json is a readable representation of the actual provider request with large Base64 media values redacted. response.json similarly redacts the returned Base64 audio. Sensitive URL userinfo, query parameters, and fragments are removed from output and persisted metadata. A remote reference marked as redacted must be supplied again before replay. The generated audio is always persisted locally because provider URLs are temporary.
 
 See docs/RUN_FORMAT.md for the stable schema.
 
@@ -90,6 +86,10 @@ AGENTS.md is the first document an autonomous coding or generation agent should 
 
 ## Status
 
-Initial implementation. Text-only generation and local @Audio1 reference generation have both been smoke-tested successfully against the official BytePlus endpoint.
+The only model covered by the provider validation documented for this project is Seed Audio 1.0. A successful dry-run validates local CLI input and request construction; it does not confirm that BytePlus accepts an arbitrary model identifier. This remediation used synthetic fixtures and local mocks and adds no provider validation.
+
+Batch and matrix jobs run sequentially. If a job fails, the command reports the failure but does not summarize earlier successful jobs; inspect the run folders before retrying. The CLI has no live progress events. Generated audio is not guaranteed to be identical across replays because provider behavior and model implementations can change.
+
+Before publishing, choose a project license. No license is included because the owner has not selected one; see [the release checklist](docs/RELEASE_CHECKLIST.md).
 
 The CLI intentionally wraps a narrow official API surface instead of becoming a generic TTS framework.

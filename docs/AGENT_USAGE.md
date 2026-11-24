@@ -35,30 +35,31 @@ Never include either value in generated run artifacts. Run from the repository/w
 
 ## Recommended generation loop
 
-1. Write or select a prompt file.
-2. Select zero to three audio refs, or one image ref.
-3. Dry-run.
-4. Inspect JSON.
-5. Execute the same command without --dry-run.
+1. Validate an autonomous text-only request first:
+
+       uv run seed-audio gen --prompt "A short neutral test sound." --dry-run --json
+
+2. For workflows, inspect the plan without a key:
+
+       uv run seed-audio batch examples/batch.yaml --dry-run --json
+       uv run seed-audio matrix examples/matrix.yaml --dry-run --json
+
+3. For a real generation, write or select a prompt, then select zero to three audio refs or one image ref.
+4. Dry-run and inspect the redacted JSON.
+5. Execute without `--dry-run` only when a provider call and potential charge are intended.
 6. Read manifest.json for durable output locations and metadata.
 
-Example:
+Text-only dry-run:
 
     uv run seed-audio gen \
-      --prompt-file prompts/taxi.txt \
-      --ref refs/driver.wav \
-      --format wav \
-      --sample-rate 48000 \
+      --prompt "A restrained late-night taxi announcement." \
       --dry-run \
       --json
 
-Then:
+When a provider call and potential charge are intended, run the chosen text-only command without `--dry-run`:
 
     uv run seed-audio gen \
-      --prompt-file prompts/taxi.txt \
-      --ref refs/driver.wav \
-      --format wav \
-      --sample-rate 48000 \
+      --prompt "A restrained late-night taxi announcement." \
       --json
 
 ## Parsing success
@@ -108,6 +109,14 @@ Do not manually reconstruct an old request from logs if the run directory exists
     uv run seed-audio replay runs/<run-id> --dry-run --json
 
 then replay without --dry-run when execution is desired.
+
+Replay only reads local references inside the run directory and checks their recorded size and SHA-256 before request construction. It rejects absolute paths, parent traversal, escaping symlinks, missing metadata, and changed files. Remote URLs with redacted userinfo, query, or fragment require a new valid URL; old recipes without a redaction marker remain usable while their original URL remains valid.
+
+A dry-run confirms local validation and request construction, not provider compatibility of an arbitrary model identifier. Seed Audio 1.0 is the only model covered by the provider validation documented for this project. Replay also cannot guarantee identical generated audio because provider behavior may change.
+
+URLs may contain temporary credentials. Their userinfo, query, and fragments are redacted in output and persisted run metadata. Older run folders created before URL redaction may still contain complete URLs and should be handled as sensitive data. Generated audio URLs are temporary; the CLI downloads the audio before reporting success.
+
+Batch and matrix workflows are sequential and stop on the first error. A failure result does not identify earlier successful jobs, and no live progress events are emitted. Inspect run manifests before retrying a failed workflow.
 
 ## Secrets
 

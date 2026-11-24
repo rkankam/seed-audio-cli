@@ -27,7 +27,7 @@ Local references copied before the provider call.
 
 Replay reads these copies, not the original files outside the run directory. This prevents later edits to a source file from changing historical runs.
 
-URL references are not copied.
+URL references are not copied. Their complete values are kept in memory only as needed for the provider request or download. Userinfo, query parameters, and fragments are removed from CLI output, recipe/request/response JSON, manifests, and subtitle JSON. A replay recipe records `url_redacted: true` when those components were removed. Such a remote reference cannot be replayed from that recipe; provide a new valid URL with `seed-audio gen --ref` or `--image`.
 
 ## recipe.json
 
@@ -61,6 +61,8 @@ Schema version 1:
 
 Local reference source paths are relative to the run directory.
 
+For remote references, `source` contains the redacted URL. `url_redacted` is `true` if userinfo, a query, or a fragment was removed. The field is omitted or `false` for older recipes and URLs that needed no redaction.
+
 ## request.json
 
 Readable provider request.
@@ -79,7 +81,7 @@ The generated Base64 audio body is replaced by:
 
     <base64 omitted>
 
-Other response metadata, including temporary URLs, durations, provider code/message and subtitles, is preserved when present.
+Other response metadata, including temporary URLs, durations, provider code/message and subtitles, is preserved when present, with URL userinfo, query parameters, and fragments redacted. A temporary response URL is used in memory to download audio before it is redacted from response.json.
 
 ## audio artifact
 
@@ -130,4 +132,8 @@ Consumers should prefer manifest.json over parsing filenames.
 
 Replay creates a new run directory, copies the historical references, rebuilds Base64 media and issues a fresh provider request with a fresh UUID.
 
-Replay does not imply deterministic audio output. It reproduces the logical input and local media state.
+Before request construction, local references must resolve inside the run directory. Absolute paths, parent traversal, and symlinks that resolve outside it are rejected. The reference size and SHA-256 must match recipe.json; a mismatch fails before any provider request. Older local recipes missing either integrity field are rejected with an explicit error because their content cannot be verified. CLI-created schema-version-1 local recipes already include both values.
+
+Older remote recipes without `url_redacted` remain replayable while their stored URL is valid; their URL is redacted from new output and artifacts. The old recipe itself is not rewritten, so protect or remove older run folders that already contain sensitive URLs. Newly persisted recipes with `url_redacted: true` require a fresh reference URL.
+
+Replay does not imply deterministic audio output. It reproduces the logical input and verified local media state, but provider behavior, model implementations, and service versions may change. Seed Audio 1.0 is the only model covered by the provider validation documented for this project. A successful dry-run checks local validation and request construction, not provider compatibility for an arbitrary model identifier.
