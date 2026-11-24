@@ -376,6 +376,59 @@ def test_ux_t10_t11_json_stdout_and_human_stderr_remain_separate(
     assert "API response received" in result.stderr
 
 
+def test_json_preserves_valid_prompt_text_that_matches_display_redaction_patterns(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    prompt = (
+        "Say the literal text audio=warm and base64=visible; "
+        "api_key=inline-secret.\nKeep marker \x1b[31m as input."
+    )
+
+    result = runner.invoke(
+        cli.app,
+        ["gen", "--prompt", prompt, "--dry-run", "--json"],
+    )
+
+    assert result.exit_code == 0, result.stderr
+    parsed = json.loads(result.stdout)
+    emitted_prompt = parsed["runs"][0]["request"]["text_prompt"]
+    assert emitted_prompt == (
+        "Say the literal text audio=warm and base64=visible; "
+        "api_key=<redacted>\nKeep marker \x1b[31m as input."
+    )
+    assert "inline-secret" not in result.stdout
+    assert "\x1b" not in result.stdout
+
+
+def test_json_preserves_artifact_paths_that_match_display_redaction_patterns(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    _install_provider(monkeypatch)
+    runs_root = tmp_path / "audio=studio" / ("A" * 170) / "runs"
+
+    result = runner.invoke(
+        cli.app,
+        [
+            "gen",
+            "--prompt",
+            "Synthetic artifact path regression.",
+            "--runs-root",
+            str(runs_root),
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0, result.stderr
+    parsed = json.loads(result.stdout)
+    run_dir = Path(parsed["runs"][0]["run_dir"])
+    assert run_dir.parent == runs_root
+    assert str(runs_root) in result.stdout
+
+
 def test_ux_t12_wait_activity_is_written_before_slow_response(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,

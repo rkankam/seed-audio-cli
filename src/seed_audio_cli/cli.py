@@ -13,8 +13,8 @@ from .models import AudioConfig, ReplayRecipe, WatermarkConfig
 from .reporting import (
     ExecutionReporter,
     planned_generation_count,
-    safe_display_text,
     safe_error_message,
+    safe_json_text,
 )
 from .runs import (
     build_request_from_recipe,
@@ -38,6 +38,8 @@ app = typer.Typer(
 )
 
 RUNS_ROOT = Path("runs")
+_JSON_BASE64_FIELDS = {"audio_data", "image_data"}
+_JSON_ARTIFACT_PATH_FIELDS = {"run_dir", "audio", "manifest"}
 
 
 def _read_prompt(prompt: str | None, prompt_file: Path | None) -> str:
@@ -55,16 +57,24 @@ def _emit(value: dict, as_json: bool) -> None:
         typer.echo(json.dumps(safe_value, ensure_ascii=False, sort_keys=True))
 
 
-def _sanitize_output(value):
+def _sanitize_output(value, *, field_name: str | None = None):
+    """Apply JSON privacy redaction without terminal display transformations."""
     if isinstance(value, dict):
         return {
-            safe_display_text(key) if isinstance(key, str) else key: _sanitize_output(item)
+            key: (
+                "<base64 omitted>"
+                if key in _JSON_BASE64_FIELDS and isinstance(item, str) and item
+                else _sanitize_output(item, field_name=key if isinstance(key, str) else None)
+            )
             for key, item in value.items()
         }
     if isinstance(value, list):
         return [_sanitize_output(item) for item in value]
     if isinstance(value, str):
-        return safe_display_text(value, preserve_newlines=True)
+        return safe_json_text(
+            value,
+            redact_long_base64=field_name not in _JSON_ARTIFACT_PATH_FIELDS,
+        )
     return value
 
 

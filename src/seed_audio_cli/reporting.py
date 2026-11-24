@@ -227,6 +227,22 @@ def safe_display_text(value: Any, *, preserve_newlines: bool = False) -> str:
     return "".join(safe)
 
 
+def safe_json_text(value: Any, *, redact_long_base64: bool = True) -> str:
+    """Redact secret-like JSON text without applying human display cleanup.
+
+    Structured reference payloads redact their Base64 fields before emission.
+    Avoid the broad ``audio=...`` display matcher here: it can rewrite valid
+    prompt text and filesystem paths. The JSON encoder safely escapes controls.
+    """
+    text = redact_urls_in_text(str(value))
+    text = _CREDENTIAL_ASSIGNMENT.sub(r"\1<redacted>", text)
+    text = _BEARER_TOKEN.sub("Bearer <redacted>", text)
+    text = _BASE64_DATA_URL.sub("<base64 omitted>", text)
+    if redact_long_base64:
+        text = _LONG_BASE64.sub("<base64 omitted>", text)
+    return text
+
+
 def safe_error_message(error: BaseException) -> str:
     return safe_display_text(error, preserve_newlines=False).replace("\n", " ")
 
