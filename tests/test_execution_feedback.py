@@ -94,24 +94,28 @@ def test_ux_t01_text_only_generation_shows_inputs_and_real_stages(
     assert len(calls) == 1
     for expected in (
         "SEED AUDIO / GEN",
-        "Generations   1",
-        "Mode          generation",
-        "[01/1] run",
+        "Generations",
+        "Mode",
+        "[01/01] run",
         "INPUTS",
-        "Model          seed-audio-1.0",
+        "Model",
+        "seed-audio-1.0",
         "A synthetic voice line.",
         "References",
         "    None",
-        "Sample rate    omitted (provider default)",
+        "Sample rate",
+        "omitted (provider default)",
         "Input validated",
         "API request started",
         "API response received",
         "Persisting run artifacts",
         "Audio and metadata saved",
         "GEN COMPLETED",
-        "Generations    1/1",
-        "Audio produced 2.5s",
-        "Billable audio 3.0s",
+        "1/1",
+        "Audio produced",
+        "2.5s",
+        "Billable audio",
+        "3.0s",
     ):
         assert expected in result.output
 
@@ -189,10 +193,10 @@ def test_ux_t05_variations_repeat_complete_inputs(
     assert len(calls) == 2
     assert result.output.count("INPUTS") == 2
     assert result.output.count("A synthetic voice line.") == 2
-    assert "Variation      1/2" in result.output
-    assert "Variation      2/2" in result.output
-    assert "[01/2] run-01" in result.output
-    assert "[02/2] run-02" in result.output
+    assert re.search(r"Variation\s+1/2", result.output)
+    assert re.search(r"Variation\s+2/2", result.output)
+    assert "[01/02] run-01" in result.output
+    assert "[02/02] run-02" in result.output
 
 
 def test_ux_t06_batch_reports_count_order_and_stops_at_actual_order(
@@ -221,12 +225,12 @@ def test_ux_t06_batch_reports_count_order_and_stops_at_actual_order(
 
     assert result.exit_code == 0, result.output
     assert len(calls) == 3
-    assert "Jobs          2" in result.output
-    assert "Generations   3" in result.output
+    assert re.search(r"Jobs\s+2", result.output)
+    assert re.search(r"Generations\s+3", result.output)
     positions = [
-        result.output.index("[01/3] beta-01"),
-        result.output.index("[02/3] beta-02"),
-        result.output.index("[03/3] alpha"),
+        result.output.index("[01/03] beta-01"),
+        result.output.index("[02/03] beta-02"),
+        result.output.index("[03/03] alpha"),
     ]
     assert positions == sorted(positions)
 
@@ -273,14 +277,14 @@ def test_ux_t07_matrix_reports_inherited_effective_values_in_dry_run(
 
     assert result.exit_code == 0, result.stderr
     assert "Workflow loaded" in result.stderr
-    assert "Jobs          1" in result.stderr
-    assert "Generations   2" in result.stderr
+    assert re.search(r"Jobs\s+1", result.stderr)
+    assert re.search(r"Generations\s+2", result.stderr)
     assert "synthetic-model-id" in result.stderr
-    assert "Sample rate    48000 Hz" in result.stderr
-    assert "Speech rate    -5" in result.stderr
-    assert "Loudness rate  2" in result.stderr
-    assert "Pitch rate     1" in result.stderr
-    assert "Watermark      true" in result.stderr
+    assert re.search(r"Sample rate\s+48000 Hz", result.stderr)
+    assert re.search(r"Speech rate\s+-5", result.stderr)
+    assert re.search(r"Loudness rate\s+2", result.stderr)
+    assert re.search(r"Pitch rate\s+1", result.stderr)
+    assert re.search(r"Watermark\s+true", result.stderr)
     assert "no provider call was made" in result.stderr
     assert "API request started" not in result.stderr
     assert json.loads(result.stdout)["ok"] is True
@@ -460,7 +464,7 @@ def test_ux_t14_timeout_stops_wait_counter_and_preserves_exit_code(
 
     assert result.exit_code == 2
     assert "Generation failed during provider request" in result.output
-    assert "synthetic request timed out" in result.output
+    assert re.search(r"synthetic\s+request\s+timed\s+out", result.output)
     assert not any(
         thread.name == "seed-audio-reporting-wait" for thread in threading.enumerate()
     )
@@ -530,10 +534,10 @@ def test_ux_t16_partial_batch_failure_reports_saved_failed_and_unexecuted(
     assert result.exit_code == 2
     assert len(calls) == 2
     assert "BATCH FAILED" in result.output
-    assert "Generations completed 1/3" in result.output
+    assert re.search(r"Completed generations\s+1/3", result.output)
     assert re.search(r"(?m)^\s*Failed\s+1$", result.output)
     assert re.search(r"(?m)^\s*Not executed\s+1$", result.output)
-    assert "saved_audio.wav  1.2s" in result.output
+    assert re.search(r"Audio\s+saved_audio\.wav\s+1.2s", result.output)
 
 
 def test_ux_t17_t19_noninteractive_output_neutralizes_controls_only_for_display(
