@@ -96,6 +96,19 @@ Example:
 
 The process exits with code 2.
 
+## Execution log
+
+Commands print an append-only human log by default. With `--json`, the log is
+sent to stderr and stdout contains only the existing JSON result. Agents should
+parse stdout and capture stderr separately when execution feedback is useful.
+
+Each generation repeats its effective inputs, including the full prompt,
+available reference metadata, and values in the prepared provider request. A
+dry-run shows the prepared plan and states that no provider call was made. While
+a synchronous request is pending, periodic lines show elapsed local time; they
+do not indicate provider progress or remaining time. Prompts and local paths
+can contain personal information, so review logs before sharing them.
+
 ## Cost bounding
 
 A single gen command may execute up to five variations.
@@ -116,7 +129,10 @@ A dry-run confirms local validation and request construction, not provider compa
 
 URLs may contain temporary credentials. Their userinfo, query, and fragments are redacted in output and persisted run metadata. Older run folders created before URL redaction may still contain complete URLs and should be handled as sensitive data. Generated audio URLs are temporary; the CLI downloads the audio before reporting success.
 
-Batch and matrix workflows are sequential and stop on the first error. A failure result does not identify earlier successful jobs, and no live progress events are emitted. Inspect run manifests before retrying a failed workflow.
+Batch and matrix workflows are sequential and stop on the first error. The
+human log reports earlier generations that completed and were persisted, the
+generation that failed when known, and generations that did not execute.
+Inspect run manifests before retrying a failed workflow.
 
 ## Secrets
 

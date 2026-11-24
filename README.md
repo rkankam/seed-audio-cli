@@ -62,6 +62,24 @@ Replay a previous run:
 
 Batch and matrix examples are in examples/.
 
+## Execution feedback
+
+By default, `gen`, `replay`, `batch`, and `matrix` print a chronological terminal
+log. Each generation shows its effective model, full prompt, references and
+available local media metadata, audio settings, execution stages, persisted
+artifact paths, and result metadata. Repeated variations show their inputs in
+full each time. Dry-runs show the prepared plan and explicitly report that no
+provider call was made.
+
+While a synchronous provider request is pending, the CLI prints elapsed local
+time once per second. This measures only time spent waiting in this CLI; it is
+not provider progress or a remaining-time estimate. With `--json`, stdout
+contains only the existing final JSON result and the human execution log goes
+to stderr.
+
+Prompts and local paths can contain personal information. Review terminal logs
+before sharing them publicly.
+
 ## Run artifact contract
 
 Every successful provider call creates an immutable run folder:
@@ -88,7 +106,12 @@ AGENTS.md is the first document an autonomous coding or generation agent should 
 
 The only model covered by the provider validation documented for this project is Seed Audio 1.0. A successful dry-run validates local CLI input and request construction; it does not confirm that BytePlus accepts an arbitrary model identifier. This remediation used synthetic fixtures and local mocks and adds no provider validation.
 
-Batch and matrix jobs run sequentially. If a job fails, the command reports the failure but does not summarize earlier successful jobs; inspect the run folders before retrying. The CLI has no live progress events. Generated audio is not guaranteed to be identical across replays because provider behavior and model implementations can change.
+Batch and matrix jobs run sequentially and stop at the first error. The human
+log reports earlier generations that completed and were persisted, the failed
+generation when known, and generations that did not execute. Its wait counter
+shows local elapsed time only; it does not expose provider-internal progress.
+Generated audio is not guaranteed to be identical across replays because
+provider behavior and model implementations can change.
 
 Before publishing, choose a project license. No license is included because the owner has not selected one; see [the release checklist](docs/RELEASE_CHECKLIST.md).
 
