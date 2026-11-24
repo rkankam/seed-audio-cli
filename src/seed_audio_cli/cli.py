@@ -16,6 +16,7 @@ from .runs import (
     persist_result,
     prepare_recipe,
     redact_provider_payload,
+    redact_sensitive_values,
 )
 from .workflows import (
     audio_config_from_job,
@@ -42,10 +43,11 @@ def _read_prompt(prompt: str | None, prompt_file: Path | None) -> str:
 
 
 def _emit(value: dict, as_json: bool) -> None:
+    safe_value = redact_sensitive_values(value)
     if as_json:
-        typer.echo(json.dumps(value, ensure_ascii=False, sort_keys=True))
+        typer.echo(json.dumps(safe_value, ensure_ascii=False, sort_keys=True))
     else:
-        typer.echo(json.dumps(value, ensure_ascii=False, indent=2))
+        typer.echo(json.dumps(safe_value, ensure_ascii=False, indent=2))
 
 
 def _validate_out_path(out: Path | None, audio_format: str) -> None:
@@ -217,7 +219,7 @@ def replay(
         recipe = ReplayRecipe.model_validate_json(
             (source / "recipe.json").read_text(encoding="utf-8")
         )
-        request, _ = build_request_from_recipe(recipe, source)
+        request, _ = build_request_from_recipe(recipe, source, replay=True)
         _validate_out_path(out, recipe.audio_config.format)
 
         if dry_run:
@@ -255,7 +257,9 @@ def replay(
                 watermark=recipe.watermark,
                 run_dir=target,
             )
-            request, normalized = build_request_from_recipe(replay_recipe, target)
+            request, normalized = build_request_from_recipe(
+                replay_recipe, target, replay=True
+            )
             replay_recipe = replay_recipe.model_copy(
                 update={"references": normalized}
             )

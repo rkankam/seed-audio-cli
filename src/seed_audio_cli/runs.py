@@ -5,14 +5,16 @@ import json
 import re
 import shutil
 from datetime import UTC, datetime
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import Any
+from urllib.parse import urlsplit, urlunsplit
 
 from .client import ProviderResult
 from .media import encode_base64, is_url, sha256_file, validate_local_media
 from .models import Reference, ReplayRecipe, ReplayReference, SeedAudioRequest
 
 BASE64_REDACTION = "<base64 omitted>"
+_URL_RE = re.compile(r"https?://[^\s\"'<>]+", re.IGNORECASE)
 
 
 def slugify(value: str) -> str:
@@ -41,6 +43,85 @@ def json_write(path: Path, value: Any) -> None:
     )
 
 
+def redact_url(value: str) -> str:
+    """Remove URL userinfo, query parameters, and fragments from a display value."""
+    try:
+        parts = urlsplit(value)
+    except ValueError:
+        return "<redacted URL>"
+    if parts.scheme.lower() not in {"http", "https"} or not parts.netloc:
+        return value
+    safe_netloc = parts.netloc.rsplit("@", 1)[-1]
+    return urlunsplit((parts.scheme, safe_netloc, parts.path, "", ""))
+
+
+def redact_urls_in_text(value: str) -> str:
+    def replace(match: re.Match[str]) -> str:
+        raw = match.group(0)
+        trailing = ""
+        while raw and raw[-1] in ".,;:!?)]}":
+            trailing = raw[-1] + trailing
+            raw = raw[:-1]
+        return redact_url(raw) + trailing
+
+    return _URL_RE.sub(replace, value)
+
+
+def redact_sensitive_values(value: Any) -> Any:
+    """Copy JSON-shaped data while redacting URLs embedded in string values."""
+    if isinstance(value, dict):
+        return {
+            redact_urls_in_text(key) if isinstance(key, str) else key: redact_sensitive_values(item)
+            for key, item in value.items()
+        }
+    if isinstance(value, list):
+        return [redact_sensitive_values(item) for item in value]
+    if isinstance(value, str):
+        return redact_urls_in_text(value)
+    return value
+
+
+def redact_recipe(recipe: ReplayRecipe) -> ReplayRecipe:
+    references = []
+    for item in recipe.references:
+        if not item.is_url:
+            references.append(item)
+            continue
+        safe_source = redact_url(item.source)
+        references.append(
+            item.model_copy(
+                update={
+                    "source": safe_source,
+                    "url_redacted": item.url_redacted or safe_source != item.source,
+                }
+            )
+        )
+    return recipe.model_copy(update={"references": references})
+
+
+def _resolve_replay_reference(base_dir: Path, source: str) -> Path:
+    relative = Path(source)
+    windows_path = PureWindowsPath(source)
+    if relative.is_absolute() or windows_path.is_absolute() or windows_path.drive:
+        raise ValueError("local replay reference must be relative to its run directory")
+    if ".." in relative.parts or ".." in windows_path.parts:
+        raise ValueError("local replay reference cannot contain parent traversal")
+
+    try:
+        root = base_dir.resolve(strict=True)
+        resolved = (root / relative).resolve(strict=True)
+    except (OSError, RuntimeError) as exc:
+        raise ValueError(
+            f"local replay reference does not exist or cannot be resolved: {source}"
+        ) from exc
+
+    if not resolved.is_relative_to(root):
+        raise ValueError("local replay reference resolves outside its run directory")
+    if not resolved.is_file():
+        raise ValueError(f"local replay reference is not a file: {source}")
+    return resolved
+
+
 def _copy_reference(source: Path, refs_dir: Path, index: int) -> Path:
     refs_dir.mkdir(parents=True, exist_ok=True)
     target = refs_dir / f"{index:02d}_{source.name}"
@@ -51,9 +132,30 @@ def _copy_reference(source: Path, refs_dir: Path, index: int) -> Path:
 def build_request_from_recipe(
     recipe: ReplayRecipe,
     base_dir: Path,
+    *,
+    replay: bool = False,
 ) -> tuple[SeedAudioRequest, list[ReplayReference]]:
     refs: list[Reference] = []
     normalized: list[ReplayReference] = []
+    replay_paths: list[Path] = []
+
+    if replay:
+        for item in recipe.references:
+            if item.is_url:
+                if item.url_redacted:
+                    raise ValueError(
+                        "remote reference URL was redacted for security and cannot be "
+                        "replayed; provide a new valid URL with seed-audio gen --ref or --image"
+                    )
+                continue
+            if item.sha256 is None or item.bytes is None:
+                raise ValueError(
+                    "local replay reference is missing integrity metadata "
+                    "(sha256 and bytes); regenerate the run or provide a new reference"
+                )
+            replay_paths.append(_resolve_replay_reference(base_dir, item.source))
+
+    replay_path_iter = iter(replay_paths)
 
     for item in recipe.references:
         if item.is_url:
@@ -64,22 +166,42 @@ def build_request_from_recipe(
             normalized.append(item)
             continue
 
-        path = (base_dir / item.source).resolve()
+        path = (
+            next(replay_path_iter)
+            if replay
+            else (base_dir / item.source).resolve()
+        )
+        if replay:
+            actual_size = path.stat().st_size
+            if actual_size != item.bytes:
+                raise ValueError(
+                    "local replay reference size mismatch: "
+                    f"recorded {item.bytes} bytes, found {actual_size}"
+                )
+            actual_sha256 = sha256_file(path)
+            if actual_sha256 != item.sha256:
+                raise ValueError(
+                    "local replay reference SHA-256 mismatch: "
+                    f"recorded {item.sha256}, found {actual_sha256}"
+                )
         duration = validate_local_media(path, item.kind)
         encoded = encode_base64(path)
         if item.kind == "audio":
             refs.append(Reference(audio_data=encoded))
         else:
             refs.append(Reference(image_data=encoded))
-        normalized.append(
-            item.model_copy(
-                update={
-                    "sha256": sha256_file(path),
-                    "bytes": path.stat().st_size,
-                    "duration_seconds": duration,
-                }
+        if replay:
+            normalized.append(item)
+        else:
+            normalized.append(
+                item.model_copy(
+                    update={
+                        "sha256": sha256_file(path),
+                        "bytes": path.stat().st_size,
+                        "duration_seconds": duration,
+                    }
+                )
             )
-        )
 
     request = SeedAudioRequest(
         model=recipe.model,
@@ -154,14 +276,14 @@ def redact_provider_payload(payload: dict) -> dict:
         for key in ("audio_data", "image_data"):
             if key in ref:
                 ref[key] = BASE64_REDACTION
-    return cloned
+    return redact_sensitive_values(cloned)
 
 
 def redact_response(data: dict) -> dict:
     cloned = json.loads(json.dumps(data))
     if "audio" in cloned and cloned["audio"]:
         cloned["audio"] = BASE64_REDACTION
-    return cloned
+    return redact_sensitive_values(cloned)
 
 
 def persist_result(
@@ -179,8 +301,9 @@ def persist_result(
     request_path = run_dir / "request.json"
     response_path = run_dir / "response.json"
     prompt_path = run_dir / "prompt.txt"
+    persisted_recipe = redact_recipe(recipe)
 
-    json_write(recipe_path, recipe.model_dump(exclude_none=True))
+    json_write(recipe_path, persisted_recipe.model_dump(exclude_none=True))
     json_write(request_path, redact_provider_payload(request.provider_payload()))
     json_write(response_path, redact_response(provider_result.data))
     prompt_path.write_text(recipe.text_prompt, encoding="utf-8")
@@ -214,7 +337,10 @@ def persist_result(
     subtitle_path: Path | None = None
     if provider_result.data.get("subtitle") is not None:
         subtitle_path = run_dir / "subtitles.json"
-        json_write(subtitle_path, provider_result.data["subtitle"])
+        json_write(
+            subtitle_path,
+            redact_sensitive_values(provider_result.data["subtitle"]),
+        )
 
     manifest = {
         "schema_version": 1,
@@ -237,8 +363,9 @@ def persist_result(
             "subtitles": subtitle_path.name if subtitle_path else None,
         },
         "references": [
-            item.model_dump(exclude_none=True) for item in recipe.references
+            item.model_dump(exclude_none=True)
+            for item in persisted_recipe.references
         ],
     }
-    json_write(run_dir / "manifest.json", manifest)
+    json_write(run_dir / "manifest.json", redact_sensitive_values(manifest))
     return manifest

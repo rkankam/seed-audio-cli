@@ -81,6 +81,7 @@ class ReplayReference(StrictModel):
     kind: Literal["audio", "image"]
     source: str
     is_url: bool = False
+    url_redacted: bool = False
     sha256: str | None = None
     bytes: int | None = None
     duration_seconds: float | None = None
