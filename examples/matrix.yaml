@@ -1,6 +1,4 @@
 base:
-  refs:
-    - refs/driver.wav
   output:
     format: wav
     sample_rate: 48000
@@ -12,10 +10,10 @@ variations: 2
 
 runs:
   - id: restrained
-    prompt_file: prompts/restrained.txt
+    prompt: "A restrained, conversational French male voice says: La ville est calme ce soir. Minimal late-night cabin ambience, no music."
 
   - id: confident
-    prompt_file: prompts/confident.txt
+    prompt: "A French male voice introduces a late-night taxi story with exaggerated confidence and clean comic timing. Subtle road ambience, no music."
 
   - id: radio-delivery
-    prompt_file: prompts/radio-delivery.txt
+    prompt: "A French male voice delivers a late-night taxi update like an early-2000s radio transmission. Keep the speech intelligible, with sparse vehicle ambience and no music."

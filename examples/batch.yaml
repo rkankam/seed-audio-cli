@@ -6,10 +6,8 @@ jobs:
       format: wav
       sample_rate: 48000
 
-  - id: referenced-performance
-    prompt_file: prompts/referenced-performance.txt
-    refs:
-      - refs/driver.wav
+  - id: taxi-narration
+    prompt: "A French male narrator introduces a late-night taxi story with calm, absurd confidence. Sparse cabin ambience, no music."
     variations: 2
     output:
       format: wav

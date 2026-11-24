@@ -115,3 +115,9 @@ The X-Tt-Logid response header is stored as provider_log_id when present.
 ## Error behavior
 
 HTTP errors and non-zero provider business codes fail the command. The CLI does not convert failed provider calls into successful run manifests.
+
+## Validation and URL lifetime
+
+Seed Audio 1.0 is the only model covered by the provider validation documented for this project. A CLI dry-run checks local inputs and request construction only; it cannot confirm that BytePlus accepts an arbitrary model identifier. This remediation adds no provider validation.
+
+Provider result URLs are temporary. The CLI downloads the audio before reporting success and removes URL userinfo, query parameters, and fragments from persisted artifacts and user-visible output. Remote reference URLs are passed to the provider in memory as supplied, but a persisted recipe records only their redacted form. A recipe marked `url_redacted: true` needs a newly supplied URL to run again.
