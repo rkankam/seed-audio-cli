@@ -42,6 +42,30 @@ Experiment controls:
 
 --out creates an additional convenience copy. The canonical artifact remains inside the run directory.
 
+### Execution log
+
+The default human output is an append-only chronological log. Every generation
+prints its effective inputs, including the full prompt, the exact model, each
+reference and available local metadata, and the audio configuration in the
+prepared request. It then reports completed input preparation, provider
+request/response, and artifact persistence stages, followed by the saved paths
+and available result metadata. Identical inputs are repeated for each
+variation. Batch and matrix jobs are reported in their execution order without
+presenting a misleading global configuration.
+
+The pending-response counter uses a monotonic local clock and reports elapsed
+time in this CLI only. It is not a provider progress signal or an estimate of
+remaining time. Dry-runs show the prepared inputs and plan, and state that no
+provider call or audio persistence occurred.
+
+Human output goes to stdout by default. With `--json`, stdout remains the
+existing final JSON object and the human log goes to stderr, so the result can
+be parsed directly. Output is line-oriented in non-interactive terminals and
+does not use terminal animations.
+
+Prompts and local reference paths can contain personal information. Review a
+terminal log before sharing it publicly.
+
 `--dry-run` performs local validation and shows a redacted request without contacting BytePlus or requiring an API key. It does not verify that BytePlus supports an arbitrary `--model` value; Seed Audio 1.0 is the only model covered by the provider validation documented for this project.
 
 ## seed-audio replay
@@ -109,4 +133,7 @@ Each run inherits base values and may override them.
 
 In JSON mode, stdout remains parseable JSON on both success and failure.
 
-Batch and matrix jobs run sequentially and stop at the first error. Their error result does not enumerate successful earlier jobs, and no live progress events are emitted; inspect existing run folders before retrying.
+Batch and matrix jobs run sequentially and stop at the first error. The human
+log reports generations already completed and persisted, the generation that
+failed when known, and generations not executed. Inspect run folders before
+retrying.

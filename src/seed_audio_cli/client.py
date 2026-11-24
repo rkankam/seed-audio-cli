@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass
 
 import httpx
@@ -31,12 +32,39 @@ class BytePlusClient:
         self._timeout = timeout_seconds
 
     def create(self, payload: dict, request_id: str | None = None) -> ProviderResult:
+        return self._create(payload, request_id=request_id, on_request_start=None)
+
+    def create_observed(
+        self,
+        payload: dict,
+        *,
+        on_request_start: Callable[[str], None],
+        on_response_received: Callable[[str | None], None],
+    ) -> ProviderResult:
+        """Create while exposing the real request ID immediately before the call."""
+        return self._create(
+            payload,
+            request_id=None,
+            on_request_start=on_request_start,
+            on_response_received=on_response_received,
+        )
+
+    def _create(
+        self,
+        payload: dict,
+        *,
+        request_id: str | None,
+        on_request_start: Callable[[str], None] | None,
+        on_response_received: Callable[[str | None], None] | None = None,
+    ) -> ProviderResult:
         request_id = request_id or str(uuid.uuid4())
         headers = {
             "Content-Type": "application/json",
             "X-Api-Key": self._api_key,
             "X-Api-Request-Id": request_id,
         }
+        if on_request_start is not None:
+            on_request_start(request_id)
 
         try:
             with httpx.Client(timeout=self._timeout) as client:
@@ -47,6 +75,8 @@ class BytePlusClient:
         provider_log_id = response.headers.get("X-Tt-Logid") or response.headers.get(
             "x-tt-logid"
         )
+        if on_response_received is not None:
+            on_response_received(provider_log_id)
 
         try:
             data = response.json()

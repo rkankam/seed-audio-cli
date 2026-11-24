@@ -10,6 +10,12 @@ import typer
 from .client import BytePlusClient
 from .config import api_key
 from .models import AudioConfig, ReplayRecipe, WatermarkConfig
+from .reporting import (
+    ExecutionReporter,
+    planned_generation_count,
+    safe_error_message,
+    safe_json_text,
+)
 from .runs import (
     build_request_from_recipe,
     make_run_dir,
@@ -32,6 +38,8 @@ app = typer.Typer(
 )
 
 RUNS_ROOT = Path("runs")
+_JSON_BASE64_FIELDS = {"audio_data", "image_data"}
+_JSON_ARTIFACT_PATH_FIELDS = {"run_dir", "audio", "manifest"}
 
 
 def _read_prompt(prompt: str | None, prompt_file: Path | None) -> str:
@@ -44,11 +52,45 @@ def _read_prompt(prompt: str | None, prompt_file: Path | None) -> str:
 
 
 def _emit(value: dict, as_json: bool) -> None:
-    safe_value = redact_sensitive_values(value)
+    safe_value = _sanitize_output(redact_sensitive_values(value))
     if as_json:
         typer.echo(json.dumps(safe_value, ensure_ascii=False, sort_keys=True))
+
+
+def _sanitize_output(value, *, field_name: str | None = None):
+    """Apply JSON privacy redaction without terminal display transformations."""
+    if isinstance(value, dict):
+        return {
+            key: (
+                "<base64 omitted>"
+                if key in _JSON_BASE64_FIELDS and isinstance(item, str) and item
+                else _sanitize_output(item, field_name=key if isinstance(key, str) else None)
+            )
+            for key, item in value.items()
+        }
+    if isinstance(value, list):
+        return [_sanitize_output(item) for item in value]
+    if isinstance(value, str):
+        return safe_json_text(
+            value,
+            redact_long_base64=field_name not in _JSON_ARTIFACT_PATH_FIELDS,
+        )
+    return value
+
+
+def _call_provider(client, payload: dict, reporter: ExecutionReporter):
+    observed_create = getattr(client, "create_observed", None)
+    if callable(observed_create):
+        result = observed_create(
+            payload,
+            on_request_start=reporter.request_started,
+            on_response_received=reporter.provider_response_received,
+        )
     else:
-        typer.echo(json.dumps(safe_value, ensure_ascii=False, indent=2))
+        reporter.request_started()
+        result = client.create(payload)
+        reporter.provider_response_received(getattr(result, "provider_log_id", None))
+    return result
 
 
 def _validate_out_path(out: Path | None, audio_format: str) -> None:
@@ -79,9 +121,24 @@ def _generate_once(
     runs_root: Path,
     out: Path | None,
     dry_run: bool,
+    reporter: ExecutionReporter,
+    position: int,
+    total: int | None,
+    source_labels: list[str],
+    variation: tuple[int, int] | None = None,
     artifact_prefix: str | None = None,
 ) -> dict:
+    reporter.begin_generation(
+        position=position,
+        total=total,
+        name=name,
+        variation=variation,
+    )
+    reporter.set_stage("output validation")
     _validate_out_path(out, config.format)
+
+    reporter.set_stage("preparing and validating inputs")
+    reporter.event("Preparing inputs")
 
     if dry_run:
         recipe = prepare_recipe(
@@ -94,13 +151,24 @@ def _generate_once(
             run_dir=None,
         )
         request, _ = build_request_from_recipe(recipe, Path.cwd())
+        reporter.show_inputs(
+            request=request,
+            references=recipe.references,
+            source_labels=source_labels,
+            variation=variation,
+        )
+        reporter.references_encoded(recipe.references)
+        reporter.input_validated()
+        reporter.dry_run_prepared()
         return {
             "ok": True,
             "dry_run": True,
             "request": redact_provider_payload(request.provider_payload()),
         }
 
+    reporter.set_stage("creating run folder")
     run_dir = make_run_dir(runs_root, name)
+    reporter.set_run_dir(run_dir)
     try:
         recipe = prepare_recipe(
             model=model,
@@ -114,12 +182,24 @@ def _generate_once(
         request, normalized_refs = build_request_from_recipe(recipe, run_dir)
         recipe = recipe.model_copy(update={"references": normalized_refs})
 
+        reporter.show_inputs(
+            request=request,
+            references=normalized_refs,
+            source_labels=source_labels,
+            variation=variation,
+        )
+        reporter.references_encoded(normalized_refs)
+        reporter.input_validated()
+
+        reporter.set_stage("provider setup")
         client = BytePlusClient(api_key(required=True) or "")
-        result = client.create(request.provider_payload())
+        reporter.set_stage("provider request")
+        result = _call_provider(client, request.provider_payload(), reporter)
     except Exception:
         shutil.rmtree(run_dir, ignore_errors=True)
         raise
 
+    reporter.persisting()
     manifest = persist_result(
         run_dir=run_dir,
         recipe=recipe,
@@ -128,6 +208,12 @@ def _generate_once(
         command="gen",
         external_out=out,
         artifact_prefix=artifact_prefix,
+    )
+    reporter.generation_succeeded(
+        manifest=manifest,
+        run_dir=run_dir,
+        name=name,
+        external_out=out,
     )
     return {
         "ok": True,
@@ -163,7 +249,11 @@ def gen(
     dry_run: Annotated[bool, typer.Option("--dry-run")] = False,
     as_json: Annotated[bool, typer.Option("--json")] = False,
 ) -> None:
+    reporter = ExecutionReporter(command="gen", dry_run=dry_run, as_json=as_json)
+    reporter.start()
+    reporter.configure_plan(generations=variations, runs_root=runs_root)
     try:
+        reporter.set_stage("command input preparation")
         text = _read_prompt(prompt, prompt_file)
         config = AudioConfig(
             format=format,
@@ -197,13 +287,25 @@ def gen(
                     runs_root=runs_root,
                     out=variant_out,
                     dry_run=dry_run,
+                    reporter=reporter,
+                    position=index,
+                    total=variations,
+                    source_labels=[*(ref or []), *([image] if image else [])],
+                    variation=(index, variations) if variations > 1 else None,
                     artifact_prefix=None,
                 )
             )
+        reporter.finish_success()
         _emit({"ok": True, "runs": results}, as_json)
+    except KeyboardInterrupt:
+        reporter.execution_interrupted()
+        raise
     except Exception as exc:
-        _emit({"ok": False, "error": str(exc)}, as_json)
+        reporter.execution_failed(exc)
+        _emit({"ok": False, "error": safe_error_message(exc)}, as_json)
         raise typer.Exit(code=2) from exc
+    finally:
+        reporter.close()
 
 
 @app.command()
@@ -215,15 +317,37 @@ def replay(
     dry_run: Annotated[bool, typer.Option("--dry-run")] = False,
     as_json: Annotated[bool, typer.Option("--json")] = False,
 ) -> None:
+    reporter = ExecutionReporter(command="replay", dry_run=dry_run, as_json=as_json)
+    reporter.start()
+    reporter.configure_plan(generations=1, runs_root=runs_root)
     try:
         source = run_dir.resolve()
+        replay_name = name or f"replay-{source.name}"
+        reporter.begin_generation(position=1, total=1, name=replay_name)
+        reporter.set_stage("loading replay recipe")
         recipe = ReplayRecipe.model_validate_json(
             (source / "recipe.json").read_text(encoding="utf-8")
         )
+        reporter.event("Replay recipe loaded")
+        reporter.set_stage("reconstructing and validating replay inputs")
         request, _ = build_request_from_recipe(recipe, source, replay=True)
+
+        reporter.show_inputs(
+            request=request,
+            references=recipe.references,
+            source_labels=[reference.source for reference in recipe.references],
+        )
+        if any(not reference.is_url for reference in recipe.references):
+            reporter.event("Local replay reference integrity verified")
+        reporter.references_encoded(recipe.references)
+        reporter.input_validated(replay=True)
+
+        reporter.set_stage("output validation")
         _validate_out_path(out, recipe.audio_config.format)
 
         if dry_run:
+            reporter.dry_run_prepared()
+            reporter.finish_success()
             _emit(
                 {
                     "ok": True,
@@ -234,16 +358,23 @@ def replay(
             )
             return
 
-        target = make_run_dir(runs_root, name or f"replay-{source.name}")
+        reporter.set_stage("creating replay run folder")
+        target = make_run_dir(runs_root, replay_name)
+        reporter.set_run_dir(target)
         try:
+            reporter.set_stage("preparing replay references")
             replay_recipe = prepare_replay_recipe(recipe, request, target)
-            result = BytePlusClient(api_key(required=True) or "").create(
-                request.provider_payload()
-            )
+            if any(not reference.is_url for reference in recipe.references):
+                reporter.event("Verified replay references copied")
+            reporter.set_stage("provider setup")
+            client = BytePlusClient(api_key(required=True) or "")
+            reporter.set_stage("provider request")
+            result = _call_provider(client, request.provider_payload(), reporter)
         except Exception:
             shutil.rmtree(target, ignore_errors=True)
             raise
 
+        reporter.persisting()
         manifest = persist_result(
             run_dir=target,
             recipe=replay_recipe,
@@ -252,6 +383,13 @@ def replay(
             command=f"replay:{source.name}",
             external_out=out,
         )
+        reporter.generation_succeeded(
+            manifest=manifest,
+            run_dir=target,
+            name=replay_name,
+            external_out=out,
+        )
+        reporter.finish_success()
         _emit(
             {
                 "ok": True,
@@ -262,9 +400,15 @@ def replay(
             },
             as_json,
         )
+    except KeyboardInterrupt:
+        reporter.execution_interrupted()
+        raise
     except Exception as exc:
-        _emit({"ok": False, "error": str(exc)}, as_json)
+        reporter.execution_failed(exc)
+        _emit({"ok": False, "error": safe_error_message(exc)}, as_json)
         raise typer.Exit(code=2) from exc
+    finally:
+        reporter.close()
 
 
 def _run_workflow(
@@ -272,9 +416,12 @@ def _run_workflow(
     *,
     runs_root: Path,
     dry_run: bool,
+    reporter: ExecutionReporter,
 ) -> list[dict]:
     results = []
+    position = 0
     for job_index, job in enumerate(jobs, start=1):
+        reporter.set_stage(f"workflow job {job_index} preparation")
         prompt = job.get("prompt")
         if not isinstance(prompt, str) or not prompt:
             raise ValueError(f"job {job_index} requires prompt or prompt_file")
@@ -284,6 +431,7 @@ def _run_workflow(
             raise ValueError(f"job {job_index} variations must be between 1 and 5")
 
         for variant in range(1, variations + 1):
+            position += 1
             base_name = str(job.get("id", f"job-{job_index:02d}"))
             name = (
                 base_name
@@ -302,6 +450,14 @@ def _run_workflow(
                     runs_root=runs_root,
                     out=None,
                     dry_run=dry_run,
+                    reporter=reporter,
+                    position=position,
+                    total=reporter.planned_generations,
+                    source_labels=[
+                        *list(job.get("refs", [])),
+                        *([str(job["image"])] if job.get("image") else []),
+                    ],
+                    variation=(variant, variations) if variations > 1 else None,
                     artifact_prefix=name,
                 )
             )
@@ -315,16 +471,35 @@ def batch(
     dry_run: Annotated[bool, typer.Option("--dry-run")] = False,
     as_json: Annotated[bool, typer.Option("--json")] = False,
 ) -> None:
+    reporter = ExecutionReporter(command="batch", dry_run=dry_run, as_json=as_json)
+    reporter.start()
     try:
+        reporter.set_stage("workflow loading")
+        jobs = expand_batch(workflow.resolve())
+        reporter.configure_plan(
+            workflow=workflow,
+            jobs=len(jobs),
+            generations=planned_generation_count(jobs),
+            runs_root=runs_root,
+            workflow_loaded=True,
+        )
         results = _run_workflow(
-            expand_batch(workflow.resolve()),
+            jobs,
             runs_root=runs_root,
             dry_run=dry_run,
+            reporter=reporter,
         )
+        reporter.finish_success()
         _emit({"ok": True, "runs": results}, as_json)
+    except KeyboardInterrupt:
+        reporter.execution_interrupted()
+        raise
     except Exception as exc:
-        _emit({"ok": False, "error": str(exc)}, as_json)
+        reporter.execution_failed(exc)
+        _emit({"ok": False, "error": safe_error_message(exc)}, as_json)
         raise typer.Exit(code=2) from exc
+    finally:
+        reporter.close()
 
 
 @app.command()
@@ -334,16 +509,35 @@ def matrix(
     dry_run: Annotated[bool, typer.Option("--dry-run")] = False,
     as_json: Annotated[bool, typer.Option("--json")] = False,
 ) -> None:
+    reporter = ExecutionReporter(command="matrix", dry_run=dry_run, as_json=as_json)
+    reporter.start()
     try:
+        reporter.set_stage("workflow loading")
+        jobs = expand_matrix(workflow.resolve())
+        reporter.configure_plan(
+            workflow=workflow,
+            jobs=len(jobs),
+            generations=planned_generation_count(jobs),
+            runs_root=runs_root,
+            workflow_loaded=True,
+        )
         results = _run_workflow(
-            expand_matrix(workflow.resolve()),
+            jobs,
             runs_root=runs_root,
             dry_run=dry_run,
+            reporter=reporter,
         )
+        reporter.finish_success()
         _emit({"ok": True, "runs": results}, as_json)
+    except KeyboardInterrupt:
+        reporter.execution_interrupted()
+        raise
     except Exception as exc:
-        _emit({"ok": False, "error": str(exc)}, as_json)
+        reporter.execution_failed(exc)
+        _emit({"ok": False, "error": safe_error_message(exc)}, as_json)
         raise typer.Exit(code=2) from exc
+    finally:
+        reporter.close()
 
 
 if __name__ == "__main__":
