@@ -1,12 +1,14 @@
 [build-system]
-requires = ["hatchling>=1.25"]
+requires = ["hatchling>=1.28"]
 build-backend = "hatchling.build"
 
 [project]
 name = "seed-audio-cli"
 version = "0.1.0"
-description = "Agent-friendly CLI for the official BytePlus Seed Audio 1.0 API"
+description = "Independent CLI for BytePlus Seed Audio 1.0 audio generation"
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.11"
 dependencies = [
   "httpx>=0.28,<1",
