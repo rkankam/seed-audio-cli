@@ -9,7 +9,7 @@ import typer
 
 from .client import BytePlusClient
 from .config import api_key
-from .models import AudioConfig, ReplayRecipe, WatermarkConfig
+from .models import AigcMetadataConfig, AudioConfig, ReplayRecipe, WatermarkConfig
 from .reporting import (
     ExecutionReporter,
     planned_generation_count,
@@ -107,6 +107,38 @@ def _validate_out_path(out: Path | None, audio_format: str) -> None:
         raise ValueError(
             f"--out extension must match --format {audio_format}; expected {allowed}"
         )
+
+
+def _watermark_from_options(
+    *,
+    aigc_watermark: bool,
+    aigc_metadata_enable: bool,
+    content_producer: str | None,
+    produce_id: str | None,
+    content_propagator: str | None,
+    propagate_id: str | None,
+) -> WatermarkConfig | None:
+    metadata_values = (
+        aigc_metadata_enable,
+        content_producer,
+        produce_id,
+        content_propagator,
+        propagate_id,
+    )
+    metadata = (
+        AigcMetadataConfig(
+            enable=aigc_metadata_enable,
+            content_producer=content_producer,
+            produce_id=produce_id,
+            content_propagator=content_propagator,
+            propagate_id=propagate_id,
+        )
+        if any(value is not None and value is not False for value in metadata_values)
+        else None
+    )
+    if not aigc_watermark and metadata is None:
+        return None
+    return WatermarkConfig(aigc_watermark=aigc_watermark, aigc_metadata=metadata)
 
 
 def _generate_once(
@@ -242,6 +274,11 @@ def gen(
     pitch_rate: Annotated[int, typer.Option("--pitch-rate")] = 0,
     subtitles: Annotated[bool, typer.Option("--subtitles")] = False,
     aigc_watermark: Annotated[bool, typer.Option("--aigc-watermark")] = False,
+    aigc_metadata_enable: Annotated[bool, typer.Option("--aigc-metadata-enable")] = False,
+    content_producer: Annotated[str | None, typer.Option("--content-producer")] = None,
+    produce_id: Annotated[str | None, typer.Option("--produce-id")] = None,
+    content_propagator: Annotated[str | None, typer.Option("--content-propagator")] = None,
+    propagate_id: Annotated[str | None, typer.Option("--propagate-id")] = None,
     variations: Annotated[int, typer.Option("-n", "--variations", min=1, max=5)] = 1,
     name: Annotated[str, typer.Option("--name")] = "run",
     runs_root: Annotated[Path, typer.Option("--runs-root")] = RUNS_ROOT,
@@ -263,8 +300,13 @@ def gen(
             pitch_rate=pitch_rate,
             enable_subtitle=subtitles,
         )
-        watermark = (
-            WatermarkConfig(aigc_watermark=True) if aigc_watermark else None
+        watermark = _watermark_from_options(
+            aigc_watermark=aigc_watermark,
+            aigc_metadata_enable=aigc_metadata_enable,
+            content_producer=content_producer,
+            produce_id=produce_id,
+            content_propagator=content_propagator,
+            propagate_id=propagate_id,
         )
 
         results = []

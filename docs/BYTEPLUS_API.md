@@ -92,7 +92,24 @@ Controls:
 
 ### Watermark
 
-The initial CLI exposes the explicit aigc_watermark boolean only. It does not expose the full implicit metadata structure.
+The provider exposes two watermark mechanisms:
+
+- `aigc_watermark`: explicit audio rhythm marker.
+- `aigc_metadata`: implicit metadata written to the audio header.
+
+`aigc_metadata` supports:
+
+- `enable`: boolean
+- `content_producer`: string
+- `produce_id`: string
+- `content_propagator`: string
+- `propagate_id`: string
+
+The CLI exposes both mechanisms. Direct generation uses `--aigc-watermark`,
+`--aigc-metadata-enable`, `--content-producer`, `--produce-id`,
+`--content-propagator`, and `--propagate-id`. Workflow YAML uses the nested
+`watermark.aigc_metadata` object. Older recipes without this optional object
+remain valid.
 
 ## Response
 

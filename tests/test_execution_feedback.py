@@ -290,6 +290,49 @@ def test_ux_t07_matrix_reports_inherited_effective_values_in_dry_run(
     assert json.loads(result.stdout)["ok"] is True
 
 
+def test_gen_dry_run_exposes_full_watermark_metadata(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    class ForbiddenClient:
+        def __init__(self, api_key: str) -> None:
+            raise AssertionError("dry-run must not initialize the provider client")
+
+    monkeypatch.setattr(cli, "BytePlusClient", ForbiddenClient)
+    result = _invoke_gen(
+        tmp_path,
+        "--aigc-watermark",
+        "--aigc-metadata-enable",
+        "--content-producer",
+        "seed-audio-cli",
+        "--produce-id",
+        "production-123",
+        "--content-propagator",
+        "studio",
+        "--propagate-id",
+        "distribution-456",
+        "--dry-run",
+        "--json",
+    )
+
+    assert result.exit_code == 0, result.stderr
+    output = json.loads(result.stdout)
+    assert output["runs"][0]["request"]["watermark"] == {
+        "aigc_watermark": True,
+        "aigc_metadata": {
+            "enable": True,
+            "content_producer": "seed-audio-cli",
+            "produce_id": "production-123",
+            "content_propagator": "studio",
+            "propagate_id": "distribution-456",
+        },
+    }
+    assert re.search(r"Implicit watermark\s+true", result.stderr)
+    assert re.search(r"Content producer\s+seed-audio-cli", result.stderr)
+
+
 def test_ux_t08_replay_reports_verified_recipe_inputs(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,

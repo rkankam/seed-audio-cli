@@ -2,7 +2,32 @@ from pathlib import Path
 
 import yaml
 
-from seed_audio_cli.workflows import expand_matrix
+from seed_audio_cli.workflows import expand_matrix, watermark_from_job
+
+
+def test_watermark_job_accepts_implicit_metadata() -> None:
+    watermark = watermark_from_job(
+        {
+            "watermark": {
+                "aigc_watermark": True,
+                "aigc_metadata": {
+                    "enable": True,
+                    "content_producer": "seed-audio-cli",
+                    "produce_id": "production-123",
+                },
+            }
+        }
+    )
+
+    assert watermark is not None
+    assert watermark.model_dump(exclude_none=True) == {
+        "aigc_watermark": True,
+        "aigc_metadata": {
+            "enable": True,
+            "content_producer": "seed-audio-cli",
+            "produce_id": "production-123",
+        },
+    }
 
 
 def test_matrix_deep_merges_output(tmp_path: Path) -> None:
