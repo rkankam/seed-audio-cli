@@ -2,10 +2,12 @@ import pytest
 from pydantic import ValidationError
 
 from seed_audio_cli.models import (
+    AigcMetadataConfig,
     AudioConfig,
     Reference,
     ReplayReference,
     SeedAudioRequest,
+    WatermarkConfig,
 )
 
 
@@ -32,6 +34,30 @@ def test_audio_reference_limit() -> None:
     ]
     with pytest.raises(ValidationError):
         SeedAudioRequest(text_prompt="test", references=refs)
+
+
+def test_watermark_supports_full_implicit_metadata() -> None:
+    watermark = WatermarkConfig(
+        aigc_watermark=True,
+        aigc_metadata=AigcMetadataConfig(
+            enable=True,
+            content_producer="seed-audio-cli",
+            produce_id="production-123",
+            content_propagator="studio",
+            propagate_id="distribution-456",
+        ),
+    )
+
+    assert watermark.model_dump(exclude_none=True) == {
+        "aigc_watermark": True,
+        "aigc_metadata": {
+            "enable": True,
+            "content_producer": "seed-audio-cli",
+            "produce_id": "production-123",
+            "content_propagator": "studio",
+            "propagate_id": "distribution-456",
+        },
+    }
 
 
 def test_audio_config_bounds() -> None:

@@ -71,11 +71,22 @@ def expand_batch(path: Path) -> list[dict[str, Any]]:
 
 def _merge_job(base: dict[str, Any], run: dict[str, Any]) -> dict[str, Any]:
     merged = {**base, **run}
-    for key in ("output", "watermark"):
-        base_value = base.get(key)
-        run_value = run.get(key)
-        if isinstance(base_value, dict) and isinstance(run_value, dict):
-            merged[key] = {**base_value, **run_value}
+
+    base_output = base.get("output")
+    run_output = run.get("output")
+    if isinstance(base_output, dict) and isinstance(run_output, dict):
+        merged["output"] = {**base_output, **run_output}
+
+    base_watermark = base.get("watermark")
+    run_watermark = run.get("watermark")
+    if isinstance(base_watermark, dict) and isinstance(run_watermark, dict):
+        watermark = {**base_watermark, **run_watermark}
+        base_metadata = base_watermark.get("aigc_metadata")
+        run_metadata = run_watermark.get("aigc_metadata")
+        if isinstance(base_metadata, dict) and isinstance(run_metadata, dict):
+            watermark["aigc_metadata"] = {**base_metadata, **run_metadata}
+        merged["watermark"] = watermark
+
     return merged
 
 

@@ -549,6 +549,19 @@ class ExecutionReporter:
                 "Watermark",
                 _format_value(watermark.get("aigc_watermark", "unavailable")),
             )
+            metadata = watermark.get("aigc_metadata")
+            if isinstance(metadata, dict):
+                if "enable" in metadata:
+                    self._row("Implicit watermark", _format_value(metadata["enable"]))
+                metadata_items = (
+                    ("content_producer", "Content producer"),
+                    ("produce_id", "Produce ID"),
+                    ("content_propagator", "Content propagator"),
+                    ("propagate_id", "Propagate ID"),
+                )
+                for key, label in metadata_items:
+                    if key in metadata:
+                        self._row(label, _format_value(metadata[key]))
 
     def _row(
         self, label: str, value: Any, *, value_style: str | None = None

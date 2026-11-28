@@ -56,6 +56,16 @@ Schema version 1:
         "loudness_rate": 0,
         "pitch_rate": 0,
         "enable_subtitle": false
+      },
+      "watermark": {
+        "aigc_watermark": true,
+        "aigc_metadata": {
+          "enable": true,
+          "content_producer": "seed-audio-cli",
+          "produce_id": "production-123",
+          "content_propagator": "studio",
+          "propagate_id": "distribution-456"
+        }
       }
     }
 

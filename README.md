@@ -8,6 +8,8 @@ uses BytePlus's official API; it is not developed or maintained by BytePlus.
 - Text-to-audio generation with optional audio or image references.
 - Local file and remote URL references: up to three audio references or one
   image reference per request. The two reference types cannot be combined.
+- Explicit and implicit AIGC watermark configuration, including provider
+  metadata fields.
 - YAML batch and matrix workflows, with one to five variations per job.
 - Replayable run folders with request and response records, manifests, and
   copied local references.
@@ -84,7 +86,9 @@ error.
     uv run seed-audio batch examples/batch.yaml --dry-run --json
     uv run seed-audio matrix examples/matrix.yaml --dry-run --json
 
-See [docs/CLI.md](docs/CLI.md) for the YAML fields and command options.
+See [docs/CLI.md](docs/CLI.md) for the YAML fields and command options. See
+[docs/API_COVERAGE.md](docs/API_COVERAGE.md) for the provider coverage matrix,
+intentional exclusions, and the Seed Audio 1.5 decision boundary.
 
 ## Replay and traceability
 

@@ -22,8 +22,17 @@ class AudioConfig(StrictModel):
     enable_subtitle: bool = False
 
 
+class AigcMetadataConfig(StrictModel):
+    enable: bool = False
+    content_producer: str | None = None
+    produce_id: str | None = None
+    content_propagator: str | None = None
+    propagate_id: str | None = None
+
+
 class WatermarkConfig(StrictModel):
     aigc_watermark: bool = False
+    aigc_metadata: AigcMetadataConfig | None = None
 
 
 class Reference(StrictModel):

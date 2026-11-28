@@ -30,6 +30,11 @@ Output controls:
     --pitch-rate -12..12
     --subtitles
     --aigc-watermark
+    --aigc-metadata-enable
+    --content-producer TEXT
+    --produce-id TEXT
+    --content-propagator TEXT
+    --propagate-id TEXT
 
 Experiment controls:
 
@@ -41,6 +46,11 @@ Experiment controls:
     --json
 
 --out creates an additional convenience copy. The canonical artifact remains inside the run directory.
+
+`--aigc-watermark` enables the explicit audio watermark. The four metadata
+options populate the provider's implicit watermark object; use
+`--aigc-metadata-enable` to enable that object. They can be combined, and all
+values are persisted in `recipe.json` for replay.
 
 ### Execution log
 
@@ -97,8 +107,20 @@ Batch file:
         output:
           format: wav
           sample_rate: 48000
+        watermark:
+          aigc_watermark: true
+          aigc_metadata:
+            enable: true
+            content_producer: seed-audio-cli
+            produce_id: production-123
+            content_propagator: studio
+            propagate_id: distribution-456
+
+The `watermark` block belongs inside the job that should use it. A job may
+also omit it or set only the explicit `aigc_watermark` field.
 
 A job may use prompt_file instead of prompt. Relative paths are resolved from the YAML file directory.
+
 
 ## seed-audio matrix
 
