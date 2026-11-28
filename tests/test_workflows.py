@@ -2,7 +2,12 @@ from pathlib import Path
 
 import yaml
 
-from seed_audio_cli.workflows import expand_matrix, watermark_from_job
+from seed_audio_cli.models import SeedAudioRequest
+from seed_audio_cli.workflows import (
+    audio_config_from_job,
+    expand_matrix,
+    watermark_from_job,
+)
 
 
 def test_watermark_job_accepts_implicit_metadata() -> None:
@@ -61,3 +66,49 @@ def test_matrix_deep_merges_output(tmp_path: Path) -> None:
         "speech_rate": 20,
     }
     assert not list(tmp_path.glob("*.expanded.tmp.yaml"))
+
+
+def test_matrix_watermark_metadata_override_preserves_effective_payload(
+    tmp_path: Path,
+) -> None:
+    prompt = tmp_path / "prompt.txt"
+    prompt.write_text("hello", encoding="utf-8")
+    workflow = {
+        "base": {
+            "output": {"format": "wav"},
+            "watermark": {
+                "aigc_watermark": True,
+                "aigc_metadata": {
+                    "enable": True,
+                    "content_producer": "studio",
+                    "content_propagator": "broadcast",
+                },
+            },
+        },
+        "runs": [
+            {
+                "id": "run-01",
+                "prompt_file": "prompt.txt",
+                "watermark": {"aigc_metadata": {"produce_id": "run-01"}},
+            }
+        ],
+    }
+    path = tmp_path / "matrix.yaml"
+    path.write_text(yaml.safe_dump(workflow), encoding="utf-8")
+
+    job = expand_matrix(path)[0]
+    request = SeedAudioRequest(
+        text_prompt=job["prompt"],
+        audio_config=audio_config_from_job(job),
+        watermark=watermark_from_job(job),
+    )
+
+    assert request.provider_payload()["watermark"] == {
+        "aigc_watermark": True,
+        "aigc_metadata": {
+            "enable": True,
+            "content_producer": "studio",
+            "produce_id": "run-01",
+            "content_propagator": "broadcast",
+        },
+    }

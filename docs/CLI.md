@@ -107,17 +107,17 @@ Batch file:
         output:
           format: wav
           sample_rate: 48000
+        watermark:
+          aigc_watermark: true
+          aigc_metadata:
+            enable: true
+            content_producer: seed-audio-cli
+            produce_id: production-123
+            content_propagator: studio
+            propagate_id: distribution-456
 
-A watermark can include the complete provider metadata object:
-
-    watermark:
-      aigc_watermark: true
-      aigc_metadata:
-        enable: true
-        content_producer: seed-audio-cli
-        produce_id: production-123
-        content_propagator: studio
-        propagate_id: distribution-456
+The `watermark` block belongs inside the job that should use it. A job may
+also omit it or set only the explicit `aigc_watermark` field.
 
 A job may use prompt_file instead of prompt. Relative paths are resolved from the YAML file directory.
 

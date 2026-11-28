@@ -279,6 +279,51 @@ def test_real_replay_preserves_valid_remote_reference_without_copy(
 
 
 @pytest.mark.parametrize(
+    "watermark",
+    [
+        pytest.param({"aigc_watermark": True}, id="legacy-without-metadata"),
+        pytest.param(
+            {
+                "aigc_watermark": True,
+                "aigc_metadata": {
+                    "enable": True,
+                    "content_producer": "studio",
+                    "produce_id": "run-01",
+                },
+            },
+            id="metadata-format",
+        ),
+    ],
+)
+def test_replay_round_trip_preserves_legacy_and_metadata_watermark(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    watermark: dict,
+) -> None:
+    run_dir = tmp_path / "source-run"
+    make_run(run_dir)
+    recipe_path = run_dir / "recipe.json"
+    recipe = json.loads(recipe_path.read_text(encoding="utf-8"))
+    recipe["watermark"] = watermark
+    recipe_path.write_text(json.dumps(recipe), encoding="utf-8")
+    requests = install_recording_client(monkeypatch)
+
+    result = invoke_replay(
+        run_dir,
+        dry_run=False,
+        runs_root=tmp_path / "replayed-runs",
+    )
+
+    assert result.exit_code == 0, result.stdout
+    assert requests[0]["watermark"] == watermark
+    replayed_dir = Path(json.loads(result.stdout)["run_dir"])
+    replayed_recipe = json.loads(
+        (replayed_dir / "recipe.json").read_text(encoding="utf-8")
+    )
+    assert replayed_recipe["watermark"] == watermark
+
+
+@pytest.mark.parametrize(
     ("changed_content", "expected_error"),
     [
         (b"different audio fixture with a different size", "size mismatch"),
